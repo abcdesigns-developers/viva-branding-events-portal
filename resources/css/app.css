@@ -1,0 +1,60 @@
+@import 'datatables.net-dt/css/dataTables.dataTables.css';
+@import 'datatables.net-buttons-dt/css/buttons.dataTables.css';
+@import 'toastr/build/toastr.css';
+@import '@tabler/icons-webfont/dist/tabler-icons.min.css';
+@import '@fortawesome/fontawesome-free/css/all.min.css';
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Shared admin building blocks. Class names follow the ones the admin views and
+   RoleController already use (card, btn, badge...), so the markup stays the same. */
+@layer components {
+    .card { @apply rounded-xl border border-slate-200 bg-white shadow-sm; }
+    .card-header { @apply flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 px-6 py-4; }
+    .card-title { @apply text-lg font-semibold text-slate-900; }
+    .card-body { @apply p-6; }
+    .card-footer { @apply flex items-center gap-3 rounded-b-xl border-t border-slate-200 bg-slate-50 px-6 py-4; }
+
+    .btn { @apply inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition focus:outline-none focus:ring-2 focus:ring-offset-1; }
+    .btn-sm { @apply px-2.5 py-1 text-xs; }
+    .btn-primary { @apply bg-indigo-600 text-white hover:bg-indigo-700 focus:ring-indigo-500; }
+    .btn-secondary { @apply border border-slate-300 bg-white text-slate-700 hover:bg-slate-50 focus:ring-slate-400; }
+    .btn-info { @apply bg-sky-50 text-sky-700 hover:bg-sky-100 focus:ring-sky-400; }
+
+    .badge { @apply inline-flex h-8 w-8 items-center justify-center rounded-lg text-sm transition; }
+    .badge.bg-warning { @apply bg-amber-50 text-amber-600 hover:bg-amber-100; }
+    .badge.bg-info { @apply bg-sky-50 text-sky-600 hover:bg-sky-100; }
+    .badge.bg-danger { @apply bg-rose-50 text-rose-600 hover:bg-rose-100; }
+
+    .form-label { @apply mb-1 block text-sm font-medium text-slate-700; }
+    .form-control { @apply block w-full rounded-lg border-slate-300 text-sm shadow-sm focus:border-indigo-500 focus:ring-indigo-500; }
+    .form-error { @apply mt-1 text-sm text-rose-600; }
+    .form-checkbox { @apply h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500; }
+
+    .table thead th { @apply bg-slate-50 px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500; }
+    .table tbody td { @apply border-t border-slate-100 px-4 py-3 text-sm text-slate-700; }
+    .table thead th.text-center, .table tbody td.text-center { text-align: center; }
+}
+
+/* DataTables, matched to the cards above. */
+/* Toolbar: buttons on the left, search on the right; info left, paging right below the table. */
+div.dt-container { @apply flex flex-wrap items-center gap-y-4 text-sm text-slate-600; }
+div.dt-container > table.dataTable { @apply basis-full; }
+div.dt-container .dt-buttons { @apply flex flex-wrap gap-2 text-left; float: none; }
+div.dt-container .dt-search { @apply ml-auto; float: none; }
+div.dt-container .dt-paging { @apply ml-auto; }
+div.dt-container .dt-buttons .dt-button { @apply m-0 rounded-lg border border-slate-300 bg-white bg-none px-3 py-1.5 text-xs font-medium text-slate-700 shadow-none hover:bg-slate-50; }
+div.dt-container .dt-search input { @apply ml-2 rounded-lg border-slate-300 text-sm focus:border-indigo-500 focus:ring-indigo-500; }
+div.dt-container .dt-paging .dt-paging-button { @apply rounded-lg border-0 text-slate-600 !important; }
+div.dt-container .dt-paging .dt-paging-button.current { @apply bg-indigo-600 text-white !important; }
+table.dataTable { @apply border-collapse; }
+table.dataTable thead > tr > th { @apply border-b-0; }
+
+/* Toast colours from the Laravel 9 (Ready-V2) admin theme. */
+.toast-success { background-color: #06d79c !important; }
+.toast-error { background-color: #f64e60 !important; }
+.toast-info { background-color: #1475f6 !important; }
+.toast-warning { background-color: #ffb22b !important; }
+.toast-title { font-weight: 700; }
