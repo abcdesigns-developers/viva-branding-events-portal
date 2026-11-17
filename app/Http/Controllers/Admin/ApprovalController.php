@@ -2,93 +2,32 @@
 
 namespace App\Http\Controllers\Admin;
 
-use DataTables;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Storage;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\ApprovalApproveRequest;
 use App\Http\Requests\ApprovalReturnRequest;
 use App\Models\Approval;
-use App\Models\BrandingMaterial;
 use App\Models\PortalRequest;
-use App\Models\RequestDocument;
 use App\Models\RequestHistory;
+use App\Models\TeamTask;
 
 /**
- * Approval inbox for the Director (Vipin Sir coordinates). Part 1 covers the
- * Meet Events initial approval: approve, or return to the requester with remarks.
+ * Director's (Vipin Sir's) decisions, made on the request's own page. Meet Events has two
+ * checkpoints: the first approval (return goes to the requester) and the final approval
+ * of Branding's plan (return goes back to Branding).
  */
 class ApprovalController extends Controller
 {
     /**
-     * What waits in the inbox: module => [status it waits in, checkpoint, status after approval].
-     * More modules and the final proposal checkpoint are added here later.
+     * Where a request waits: module => status => checkpoint, status after approve, status
+     * after return, who gets it back and the teams that get a task on approve.
      */
     const PENDING = [
-        'meet_event' => ['status' => 'Request Raised', 'checkpoint' => 'initial', 'approved_status' => 'Initial Approval'],
+        'meet_event' => [
+            'Request Raised' => ['checkpoint' => 'initial', 'approved_status' => 'Initial Approval', 'returned_status' => 'Returned', 'return_to' => 'the requester'],
+            'Proposal Submitted' => ['checkpoint' => 'final', 'approved_status' => 'Final Approval', 'returned_status' => 'Branding Planning', 'return_to' => 'Branding', 'release_teams' => ['purchase', 'accounts', 'logistics']],
+        ],
     ];
-
-    const MODULE_NAMES = [
-        'meet_event' => 'Meet Events',
-    ];
-
-    public function index()
-    {
-        $pendingCount = $this->pendingQuery()->count();
-        $approvedToday = Approval::where('action', Approval::APPROVED)->whereDate('created_at', today())->count();
-        $returnedToday = Approval::where('action', Approval::RETURNED)->whereDate('created_at', today())->count();
-
-        return view('Admin.Approvals.index', compact('pendingCount', 'approvedToday', 'returnedToday'));
-    }
-
-    public function data(Request $request)
-    {
-        $query = $this->pendingQuery()->with(['eventType', 'location', 'user']);
-        if ($request->filled('module')) {
-            $query->where('module', $request->module);
-        }
-
-        return DataTables::eloquent($query)
-            ->addColumn('module_name', function ($portalRequest) {
-                return self::MODULE_NAMES[$portalRequest->module] ?? $portalRequest->module;
-            })
-            ->addColumn('event_type', function ($portalRequest) {
-                return $portalRequest->eventType?->name;
-            })
-            ->addColumn('location', function ($portalRequest) {
-                return $portalRequest->location?->name;
-            })
-            ->editColumn('preferred_date_1', function ($portalRequest) {
-                return $portalRequest->preferred_date_1?->format('d-m-Y');
-            })
-            ->addColumn('raised_by', function ($portalRequest) {
-                return $portalRequest->user?->name;
-            })
-            ->editColumn('submitted_at', function ($portalRequest) {
-                return $portalRequest->submitted_at?->format('d-m-Y, h:i A');
-            })
-            ->addColumn('checkpoint', function ($portalRequest) {
-                $checkpoint = self::PENDING[$portalRequest->module]['checkpoint'];
-                return '<span class="rounded-full bg-amber-50 px-2.5 py-1 text-xs font-medium text-amber-700">' . e(Approval::CHECKPOINTS[$checkpoint]) . '</span>';
-            })
-            ->addColumn('action', function ($portalRequest) {
-                return '<a href="' . route('admin.approvals.show', ['portal_request' => $portalRequest->route_key]) . '" class="btn btn-primary !px-3 !py-1 text-xs" title="Review"><i class="ti ti-eye"></i> Review</a>';
-            })
-            ->addIndexColumn()
-            ->rawColumns(['checkpoint', 'action'])->setRowId('id')->make(true);
-    }
-
-    public function show(PortalRequest $portalRequest)
-    {
-        abort_unless(array_key_exists($portalRequest->module, self::PENDING), 404);
-        $portalRequest->load(['event', 'eventType', 'location', 'user', 'guestCategories.guestCategory', 'items', 'documents', 'approvals.user', 'histories.user']);
-        $brandingMaterials = BrandingMaterial::whereIn('id', $portalRequest->branding_needs ?? [])->orderBy('name')->get();
-        $isPending = $this->isPending($portalRequest);
-        $checkpoint = self::PENDING[$portalRequest->module]['checkpoint'];
-
-        return view('Admin.Approvals.show', compact('portalRequest', 'brandingMaterials', 'isPending', 'checkpoint'));
-    }
 
     public function approve(ApprovalApproveRequest $request, PortalRequest $portalRequest)
     {
@@ -97,7 +36,7 @@ class ApprovalController extends Controller
         return $this->decide($portalRequest, Approval::APPROVED, $data['remarks'] ?? null);
     }
 
-    /** Return to the requester; remarks say what to fix. */
+    /** Return with remarks: to the requester (first approval) or to Branding (final approval). */
     public function sendBack(ApprovalReturnRequest $request, PortalRequest $portalRequest)
     {
         $data = $request->validated();
@@ -105,44 +44,25 @@ class ApprovalController extends Controller
         return $this->decide($portalRequest, Approval::RETURNED, $data['remarks']);
     }
 
-    public function document(PortalRequest $portalRequest, RequestDocument $requestDocument)
+    /** The checkpoint this request waits at now, or null when it is not waiting. */
+    private function rule(PortalRequest $portalRequest): ?array
     {
-        abort_unless(array_key_exists($portalRequest->module, self::PENDING), 404);
-        abort_unless($requestDocument->request_id == $portalRequest->id, 404);
-
-        return Storage::disk('local')->download($requestDocument->file_path, $requestDocument->original_name);
-    }
-
-    /** Requests waiting at a checkpoint, oldest first. */
-    private function pendingQuery()
-    {
-        return PortalRequest::where(function ($query) {
-            foreach (self::PENDING as $module => $rule) {
-                $query->orWhere(fn ($q) => $q->where('module', $module)->where('status', $rule['status']));
-            }
-        })->oldest('submitted_at');
-    }
-
-    private function isPending(PortalRequest $portalRequest): bool
-    {
-        $rule = self::PENDING[$portalRequest->module] ?? null;
-
-        return $rule && $portalRequest->status === $rule['status'];
+        return self::PENDING[$portalRequest->module][$portalRequest->status] ?? null;
     }
 
     private function decide(PortalRequest $portalRequest, string $action, ?string $remarks)
     {
         abort_unless(array_key_exists($portalRequest->module, self::PENDING), 404);
-        if (! $this->isPending($portalRequest)) {
+        $rule = $this->rule($portalRequest);
+        if (! $rule) {
             return response()->json([
                 'status' => 'error',
                 'message' => 'This request is no longer waiting for approval.',
             ], 422);
         }
 
-        $rule = self::PENDING[$portalRequest->module];
         $approved = $action === Approval::APPROVED;
-        $toStatus = $approved ? $rule['approved_status'] : 'Returned';
+        $toStatus = $approved ? $rule['approved_status'] : $rule['returned_status'];
 
         DB::transaction(function () use ($portalRequest, $rule, $action, $remarks, $approved, $toStatus) {
             $fromStatus = $portalRequest->status;
@@ -155,23 +75,38 @@ class ApprovalController extends Controller
             ]);
 
             $portalRequest->status = $toStatus;
-            $portalRequest->stage = $approved ? (PortalRequest::MEET_STATUSES[$toStatus] ?? 'Approval') : 'Request Raised';
+            // "Returned" sits outside the Meet status line, so it rolls up to Request Raised.
+            $portalRequest->stage = PortalRequest::MEET_STATUSES[$toStatus] ?? 'Request Raised';
             $portalRequest->save();
 
             RequestHistory::create([
                 'request_id' => $portalRequest->id,
                 'user_id' => auth()->id(),
-                'action' => Approval::CHECKPOINTS[$rule['checkpoint']] . ($approved ? ' given' : ' – returned to requester'),
+                'action' => Approval::CHECKPOINTS[$rule['checkpoint']] . ($approved ? ' given' : ' – returned to ' . $rule['return_to']),
                 'from_status' => $fromStatus,
                 'to_status' => $toStatus,
                 'remarks' => $remarks,
             ]);
+
+            // Final approval releases the work to the teams. Not before this step.
+            if ($approved && ! empty($rule['release_teams'])) {
+                foreach ($rule['release_teams'] as $team) {
+                    TeamTask::firstOrCreate(['request_id' => $portalRequest->id, 'team' => $team], ['status' => TeamTask::PENDING]);
+                }
+                RequestHistory::create([
+                    'request_id' => $portalRequest->id,
+                    'user_id' => auth()->id(),
+                    'action' => 'Tasks released to ' . collect($rule['release_teams'])->map(fn ($team) => TeamTask::TEAMS[$team])->join(', ', ' and '),
+                    'from_status' => $toStatus,
+                    'to_status' => $toStatus,
+                ]);
+            }
         });
 
         return response()->json([
             'status' => 'success',
-            'message' => $portalRequest->request_no . ($approved ? ' approved' : ' returned to the requester'),
-            'redirect' => route('admin.approvals.index'),
+            'message' => $portalRequest->request_no . ($approved ? ' approved' : ' returned to ' . $rule['return_to']),
+            'redirect' => route('admin.meet-event-requests.show', ['portal_request' => $portalRequest->route_key]),
         ], 200);
     }
 }

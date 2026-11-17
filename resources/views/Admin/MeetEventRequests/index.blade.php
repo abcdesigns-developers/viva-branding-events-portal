@@ -1,10 +1,11 @@
 @extends('layouts.admin')
-@section('title') Meet Event Requests @endsection
+@section('title') Meet Events @endsection
 @section('content')
 <div class="card">
     <div class="card-header">
         <div>
-            <h2 class="card-title">My Requests - Meet Events</h2>
+            <h2 class="card-title">Meet Events</h2>
+            <p class="text-sm text-slate-500">Every meet stays here. Open a request to see its status and do your part.</p>
         </div>
         <div class="flex flex-wrap items-center gap-3">
             <select id="filter-status" class="form-control datatable-filter w-52" aria-label="Status">
@@ -25,7 +26,7 @@
             <thead>
                 <tr>
                     <th width="5%">#</th>
-                    <th width="10%">Actions</th>
+                    <th width="8%">Actions</th>
                     <th>Request ID</th>
                     <th>Event Type</th>
                     <th>Event Location</th>
@@ -78,10 +79,7 @@
         ).addClass("btn btn-primary mr-1");
     });
 
-    // Filters reload the list from the server, like the status toggle does.
+    // Filters reload the list from the server.
     $(document).on('change', '.datatable-filter', () => $('#datatable').DataTable().draw());
-
-    const toastOptions = { showMethod: "slideDown", hideMethod: "slideUp", timeOut: 1500, closeButton: true };
-
 </script>
 @endsection

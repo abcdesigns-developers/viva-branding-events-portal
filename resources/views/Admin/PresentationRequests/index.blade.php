@@ -4,7 +4,7 @@
 <div class="card">
     <div class="card-header">
         <div>
-            <h2 class="card-title">My Requests - Presentations &amp; Small Events</h2>
+            <h2 class="card-title">Presentations &amp; Small Events</h2>
         </div>
         <div class="flex flex-wrap items-center gap-3">
             <select id="filter-status" class="form-control datatable-filter w-52" aria-label="Status">

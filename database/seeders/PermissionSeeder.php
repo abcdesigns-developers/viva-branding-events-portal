@@ -186,8 +186,32 @@ class PermissionSeeder extends Seeder
         'Approval' => [
             'controller' => 'Admin\ApprovalController',
             'permissions' => [
-                'approval-view' => ['index', 'data', 'show', 'document'],
                 'approval-action' => ['approve', 'sendBack'],
+            ]
+        ],
+        'Meet Planning' => [
+            'controller' => 'Admin\MeetPlanningController',
+            'permissions' => [
+                'meetplanning-update' => ['store', 'update'],
+                'meetplanning-close' => ['eventReady', 'complete', 'close'],
+            ]
+        ],
+        'Purchase Task' => [
+            'controller' => 'Admin\PurchaseTaskController',
+            'permissions' => [
+                'purchasetask-update' => ['store', 'complete'],
+            ]
+        ],
+        'Accounts Task' => [
+            'controller' => 'Admin\AccountsTaskController',
+            'permissions' => [
+                'accountstask-update' => ['store', 'complete'],
+            ]
+        ],
+        'Logistics Task' => [
+            'controller' => 'Admin\LogisticsTaskController',
+            'permissions' => [
+                'logisticstask-update' => ['items', 'sendOut'],
             ]
         ],
         'Exhibition Request' => [
@@ -328,8 +352,14 @@ class PermissionSeeder extends Seeder
             'meeteventrequest-store',
             'meeteventrequest-update',
             #Approval
-            'approval-view',
             'approval-action',
+            #Meet Planning
+            'meetplanning-update',
+            'meetplanning-close',
+            #Team tasks
+            'purchasetask-update',
+            'accountstask-update',
+            'logisticstask-update',
             #Exhibition Request
             'exhibitionrequest-view',
             'exhibitionrequest-store',

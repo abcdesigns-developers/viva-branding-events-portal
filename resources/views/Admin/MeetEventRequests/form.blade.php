@@ -210,8 +210,8 @@
             if (checked) total += parseInt($(this).val() || 0, 10);
         });
         $('#total-guests').text(total);
-        // Auto gift rows follow the guest total until the quantity is edited by hand.
-        $('#item-rows .item-row.auto-gift').find('.item-qty').val(total || '');
+        // Event Type gifts always follow the guest total.
+        $('#item-rows .item-row.type-locked').find('.item-qty').val(total || '');
     }
     $(document).on('change input', '.guest-check, .guest-count', updateTotal);
     updateTotal();
@@ -266,32 +266,36 @@
     });
     savedItems.length ? savedItems.forEach(addRow) : addRow();
 
-    // Rows that come from the Event Type keep Type fixed as Gift.
-    function lockType(row) {
-        row.addClass('type-locked').find('.item-type')
+    // Gifts that come from the Event Type are read-only: type, item and quantity
+    // (= Total Guests) are set for you, and the row cannot be removed.
+    function lockRow(row) {
+        row.addClass('type-locked');
+        row.find('.item-type, .item-select')
             .addClass('pointer-events-none bg-slate-100 text-slate-500')
             .attr({tabindex: -1, 'aria-disabled': 'true', title: 'Set by Event Type'});
+        row.find('.item-qty').prop('readonly', true).addClass('bg-slate-100 text-slate-500').attr('title', 'Same as Total Guests');
+        row.find('.auto-tag').removeClass('hidden');
+        row.find('.remove-item').css('visibility', 'hidden').prop('disabled', true).attr('tabindex', -1);
     }
+    const typeGiftIds = () => (eventTypeGifts[$('#event_type_id').val()] || [])
+        .filter(id => (itemTypes.gift?.options || []).some(option => option.id == id)).map(String);
 
-    // Event Type decides the auto gifts: replace the old auto rows with this type's gifts.
+    // Event Type decides the gifts: replace the old locked rows with this type's gifts.
     function applyTypeGifts() {
         $('#item-rows .item-row.type-locked').remove();
         const total = parseInt($('#total-guests').text(), 10) || '';
-        const giftIds = (eventTypeGifts[$('#event_type_id').val()] || [])
-            .filter(id => (itemTypes.gift?.options || []).some(option => option.id == id));
+        const giftIds = typeGiftIds();
         giftIds.forEach(id => {
-            const already = $('#item-rows .item-row').filter(function () {
-                return ! $(this).hasClass('type-locked') && $(this).find('.item-type').val() === 'gift' && $(this).find('.item-select').val() == id;
-            }).length;
-            if (already) return;
+            // A gift added by hand that the Event Type also gives becomes the locked row.
+            $('#item-rows .item-row').filter(function () {
+                return $(this).find('.item-type').val() === 'gift' && $(this).find('.item-select').val() == id;
+            }).remove();
             addRow({type: 'gift', item_id: id, quantity: total});
-            const row = $('#item-rows .item-row').last();
-            row.addClass('auto-gift').find('.auto-tag').removeClass('hidden');
-            lockType(row);
+            lockRow($('#item-rows .item-row').last());
         });
         // Drop blank rows once gifts are filled in.
         if (giftIds.length) {
-            $('#item-rows .item-row').not('.auto-gift').filter(function () {
+            $('#item-rows .item-row').not('.type-locked').filter(function () {
                 return ! $(this).find('.item-select').val() && ! $(this).find('.item-qty').val();
             }).remove();
         }
@@ -299,23 +303,17 @@
         renumberRows();
     }
     $('#event_type_id').on('change', applyTypeGifts);
-    // Changing an auto row by hand makes it a normal row.
-    $(document).on('input change', '.auto-gift .item-qty, .auto-gift .item-select', function () {
-        $(this).closest('.item-row').removeClass('auto-gift').find('.auto-tag').addClass('hidden');
-    });
     // New request with a type already chosen (e.g. after validation) gets its gifts too.
     if (! savedItems.length && $('#event_type_id').val()) applyTypeGifts();
-    // Editing: saved gifts of the current type that still match Total Guests stay auto.
+    // Editing: saved gifts of the current type are locked again and follow Total Guests.
     if (savedItems.length) {
-        const typeGifts = (eventTypeGifts[$('#event_type_id').val()] || []).map(String);
+        const giftIds = typeGiftIds();
         const total = $('#total-guests').text();
         $('#item-rows .item-row').each(function () {
             const row = $(this);
-            if (row.find('.item-type').val() !== 'gift' || ! typeGifts.includes(row.find('.item-select').val())) return;
-            lockType(row);
-            if (row.find('.item-qty').val() === total) {
-                row.addClass('auto-gift').find('.auto-tag').removeClass('hidden');
-            }
+            if (row.find('.item-type').val() !== 'gift' || ! giftIds.includes(row.find('.item-select').val())) return;
+            lockRow(row);
+            row.find('.item-qty').val(total);
         });
     }
 

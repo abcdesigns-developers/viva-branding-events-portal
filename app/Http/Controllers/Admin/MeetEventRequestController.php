@@ -13,7 +13,9 @@ use App\Models\BrandingMaterial;
 use App\Models\Event;
 use App\Models\EventType;
 use App\Models\GuestCategory;
+use App\Models\Hotel;
 use App\Models\Location;
+use App\Models\Payment;
 use App\Models\PortalRequest;
 use App\Models\RequestDocument;
 use App\Models\RequestHistory;
@@ -28,11 +30,9 @@ class MeetEventRequestController extends Controller
 
     public function index()
     {
-        // Statuses for the filter: the usual ones plus any already used on this user's requests.
-        $statuses = collect(['Request Raised', 'Returned'])
-            ->merge($this->visibleRequests()->distinct()->pluck('status'))
-            ->unique()->values();
-
+        // All Meet statuses, with Returned after Request Raised.
+        $statuses = collect(array_keys(PortalRequest::MEET_STATUSES))->splice(0, 1)->push('Returned')
+            ->merge(array_slice(array_keys(PortalRequest::MEET_STATUSES), 1));
         return view('Admin.MeetEventRequests.index', compact('statuses'));
     }
 
@@ -99,15 +99,19 @@ class MeetEventRequestController extends Controller
     public function show(PortalRequest $portalRequest)
     {
         $this->authorizeRequest($portalRequest);
-        $portalRequest->load(['event', 'eventType', 'location', 'user', 'guestCategories.guestCategory', 'items', 'documents.uploader', 'histories.user', 'approvals.user']);
+        $portalRequest->load(['event', 'eventType', 'location', 'user', 'guestCategories.guestCategory', 'items', 'documents.uploader', 'histories.user', 'approvals.user', 'proposal.options', 'teamTasks.purchaseOrders', 'teamTasks.payments', 'teamTasks.dispatchDetail.createdBy', 'teamTasks.completer']);
         $brandingMaterials = BrandingMaterial::whereIn('id', $portalRequest->branding_needs ?? [])->orderBy('name')->get();
+        // Everything each person needs to do their part on this one page.
+        $hotels = Hotel::where('status', 'ACTIVE')->orderBy('name')->pluck('name');
+        $paymentTypes = Payment::TYPES;
+        $paymentModes = Payment::MODES;
 
-        return view('Admin.MeetEventRequests.show', compact('portalRequest', 'brandingMaterials'));
+        return view('Admin.MeetEventRequests.show', compact('portalRequest', 'brandingMaterials', 'hotels', 'paymentTypes', 'paymentModes'));
     }
 
     public function edit(PortalRequest $portalRequest)
     {
-        $this->authorizeRequest($portalRequest);
+        $this->authorizeOwner($portalRequest);
         abort_unless($portalRequest->isEditable(), 403, 'Only returned requests can be edited.');
         $portalRequest->load(['guestCategories', 'items', 'documents', 'approvals.user']);
 
@@ -116,7 +120,7 @@ class MeetEventRequestController extends Controller
 
     public function update(MeetEventUpdateRequest $request, PortalRequest $portalRequest)
     {
-        $this->authorizeRequest($portalRequest);
+        $this->authorizeOwner($portalRequest);
         abort_unless($portalRequest->isEditable(), 403, 'Only returned requests can be edited.');
 
         $data = $request->validated();
@@ -145,11 +149,19 @@ class MeetEventRequestController extends Controller
         return $event;
     }
 
-    /** Requests this user may see: all for SuperAdmin, otherwise only their own. */
+    /**
+     * Everyone who works on Meet requests (Director, Branding, Purchase, Accounts,
+     * Logistics) and SuperAdmin see all of them; a requester sees only their own.
+     */
+    private function seesAll(): bool
+    {
+        return auth()->user()->hasRole('SuperAdmin') || PortalRequest::meetActorsOf(auth()->user()) !== [];
+    }
+
     private function visibleRequests()
     {
         $query = PortalRequest::where('module', self::MODULE);
-        if (! auth()->user()->hasRole('SuperAdmin')) {
+        if (! $this->seesAll()) {
             $query->where('user_id', auth()->id());
         }
 
@@ -157,6 +169,13 @@ class MeetEventRequestController extends Controller
     }
 
     private function authorizeRequest(PortalRequest $portalRequest)
+    {
+        abort_unless($portalRequest->module == self::MODULE, 404);
+        abort_unless($this->seesAll() || $portalRequest->user_id == auth()->id(), 403);
+    }
+
+    /** Only the requester (or SuperAdmin) edits the request form itself. */
+    private function authorizeOwner(PortalRequest $portalRequest)
     {
         abort_unless($portalRequest->module == self::MODULE, 404);
         abort_unless(auth()->user()->hasRole('SuperAdmin') || $portalRequest->user_id == auth()->id(), 403);
@@ -201,6 +220,14 @@ class MeetEventRequestController extends Controller
 
         // Keep only categories with guests; their total is the request's guest count.
         $data['guests'] = collect($data['guests'] ?? [])->filter(fn ($count) => (int) $count > 0)->map(fn ($count) => (int) $count)->all();
+
+        // Gifts set on the Event Type are fixed: one row each, quantity = total guests.
+        $typeGiftIds = EventType::find($data['event_type_id'] ?? null)?->gifts()->where('gift_items.status', 'ACTIVE')->pluck('gift_items.id')->all() ?? [];
+        $data['items'] = collect($data['items'] ?? [])
+            ->reject(fn ($item) => $item['type'] === 'gift' && in_array((int) $item['item_id'], $typeGiftIds, true))
+            ->values()
+            ->merge(array_map(fn ($id) => ['type' => 'gift', 'item_id' => $id, 'quantity' => array_sum($data['guests'])], $typeGiftIds))
+            ->all();
 
         $portalRequest->fill([
             'event_id' => $this->meetEvent()->id,

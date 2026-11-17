@@ -217,6 +217,14 @@ class PresentationRequestController extends Controller
         ]);
         $portalRequest->save();
 
+        // Gifts set on the Meeting Type are fixed: one row each, quantity = attendee count.
+        $typeGiftIds = EventType::find($data['event_type_id'] ?? null)?->gifts()->where('gift_items.status', 'ACTIVE')->pluck('gift_items.id')->all() ?? [];
+        $data['items'] = collect($data['items'] ?? [])
+            ->reject(fn ($item) => $item['type'] === 'gift' && in_array((int) $item['item_id'], $typeGiftIds, true))
+            ->values()
+            ->merge(array_map(fn ($id) => ['type' => 'gift', 'item_id' => $id, 'quantity' => (int) $data['attendee_count']], $typeGiftIds))
+            ->all();
+
         $portalRequest->items()->delete();
         foreach ($data['items'] ?? [] as $item) {
             $portalRequest->items()->create([

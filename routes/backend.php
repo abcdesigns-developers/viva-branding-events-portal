@@ -25,6 +25,10 @@ use App\Http\Controllers\Admin\HotelController;
 use App\Http\Controllers\Admin\LocationController;
 use App\Http\Controllers\Admin\MeetEventRequestController;
 use App\Http\Controllers\Admin\ApprovalController;
+use App\Http\Controllers\Admin\MeetPlanningController;
+use App\Http\Controllers\Admin\PurchaseTaskController;
+use App\Http\Controllers\Admin\AccountsTaskController;
+use App\Http\Controllers\Admin\LogisticsTaskController;
 use App\Http\Controllers\Admin\ExhibitionRequestController;
 use App\Http\Controllers\Admin\PresentationRequestController;
 use App\Http\Controllers\Admin\GiftPopRequestController;
@@ -135,13 +139,29 @@ Route::middleware(['auth', 'admin', 'preventBackHistory'])->group(function () {
         Route::post('meet-event-requests/data', [MeetEventRequestController::class, 'data'])->name('meet-event-requests.data');
         Route::get('meet-event-requests/{portal_request}/documents/{request_document}', [MeetEventRequestController::class, 'document'])->name('meet-event-requests.document');
 
-        //Approval inbox (Director / Vipin Sir)
-        Route::get('approvals', [ApprovalController::class, 'index'])->name('approvals.index');
-        Route::post('approvals/data', [ApprovalController::class, 'data'])->name('approvals.data');
-        Route::get('approvals/{portal_request}', [ApprovalController::class, 'show'])->name('approvals.show');
+        //Meet Events – work done on the request page ({portal_request} / {team_task} are Hashids keys)
+        //Branding: plan, event ready, completed, closed
+        Route::post('meet-plannings/{portal_request}', [MeetPlanningController::class, 'store'])->name('meet-plannings.store');
+        Route::put('meet-plannings/{portal_request}', [MeetPlanningController::class, 'update'])->name('meet-plannings.update');
+        Route::post('meet-plannings/{portal_request}/event-ready', [MeetPlanningController::class, 'eventReady'])->name('meet-plannings.event-ready');
+        Route::post('meet-plannings/{portal_request}/complete', [MeetPlanningController::class, 'complete'])->name('meet-plannings.complete');
+        Route::post('meet-plannings/{portal_request}/close', [MeetPlanningController::class, 'close'])->name('meet-plannings.close');
+
+        //Purchase – vendor and PO
+        Route::post('purchase-tasks/{team_task}/purchase-orders', [PurchaseTaskController::class, 'store'])->name('purchase-tasks.store');
+        Route::post('purchase-tasks/{team_task}/complete', [PurchaseTaskController::class, 'complete'])->name('purchase-tasks.complete');
+
+        //Accounts – advance and payment
+        Route::post('accounts-tasks/{team_task}/payments', [AccountsTaskController::class, 'store'])->name('accounts-tasks.store');
+        Route::post('accounts-tasks/{team_task}/complete', [AccountsTaskController::class, 'complete'])->name('accounts-tasks.complete');
+
+        //Logistics – material and dispatch
+        Route::post('logistics-tasks/{team_task}/items', [LogisticsTaskController::class, 'items'])->name('logistics-tasks.items');
+        Route::post('logistics-tasks/{team_task}/dispatch', [LogisticsTaskController::class, 'sendOut'])->name('logistics-tasks.dispatch');
+
+        //Director / Vipin Sir – approve or return
         Route::post('approvals/{portal_request}/approve', [ApprovalController::class, 'approve'])->name('approvals.approve');
         Route::post('approvals/{portal_request}/return', [ApprovalController::class, 'sendBack'])->name('approvals.return');
-        Route::get('approvals/{portal_request}/documents/{request_document}', [ApprovalController::class, 'document'])->name('approvals.document');
 
         //Requests – Events / Exhibitions / Sponsorship
         Route::resource('exhibition-requests', ExhibitionRequestController::class)->parameters(['exhibition-requests' => 'portal_request'])->except(['destroy']);

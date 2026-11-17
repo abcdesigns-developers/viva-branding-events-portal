@@ -4,7 +4,7 @@
 <div class="card">
     <div class="card-header">
         <div>
-            <h2 class="card-title">My Requests - Branding Support</h2>
+            <h2 class="card-title">Branding Support</h2>
         </div>
         <div class="flex flex-wrap items-center gap-3">
             <select id="filter-status" class="form-control datatable-filter w-52" aria-label="Status">

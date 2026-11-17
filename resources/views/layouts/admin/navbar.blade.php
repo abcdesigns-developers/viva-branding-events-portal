@@ -21,27 +21,16 @@
     ])->filter(fn ($item) => auth()->user()->can($item[2] . '-view'));
     $inMasters = $masters->contains(fn ($item) => Route::is($item[1] . '.*'));
 
-    // Request menus: [label, route name, permission, icon, is this the current page]
-    $raiseItems = collect([
-        ['Meet Events', 'admin.meet-event-requests.create', 'meeteventrequest-store', 'ti-users-group', Route::is('admin.meet-event-requests.create')],
-        ['Exhibition / Sponsorship', 'admin.exhibition-requests.create', 'exhibitionrequest-store', 'ti-building-store', Route::is('admin.exhibition-requests.create')],
-        ['Presentations & Small Events', 'admin.presentation-requests.create', 'presentationrequest-store', 'ti-presentation', Route::is('admin.presentation-requests.create')],
-        ['Gift & POP', 'admin.gift-pop-requests.create', 'giftpoprequest-store', 'ti-gift', Route::is('admin.gift-pop-requests.create')],
-        ['Branding Support', 'admin.branding-requests.create', 'brandingrequest-store', 'ti-brush', Route::is('admin.branding-requests.create')],
-        ['New Experience Centre', 'admin.experience-centre-requests.create', 'experiencecentrerequest-store', 'ti-building', Route::is('admin.experience-centre-requests.create')],
+    // Request modules, each its own menu item: [label, route prefix, view permission, icon].
+    // Each list page has its own Raise Request button.
+    $requestItems = collect([
+        ['Meet Events', 'admin.meet-event-requests', 'meeteventrequest-view', 'ti-users-group'],
+        ['Exhibition / Sponsorship', 'admin.exhibition-requests', 'exhibitionrequest-view', 'ti-building-store'],
+        ['Presentations & Small Events', 'admin.presentation-requests', 'presentationrequest-view', 'ti-presentation'],
+        ['Gift & POP', 'admin.gift-pop-requests', 'giftpoprequest-view', 'ti-gift'],
+        ['Branding Support', 'admin.branding-requests', 'brandingrequest-view', 'ti-brush'],
+        ['New Experience Centre', 'admin.experience-centre-requests', 'experiencecentrerequest-view', 'ti-building'],
     ])->filter(fn ($item) => auth()->user()->can($item[2]));
-    $myRequestItems = collect([
-        ['Meet Events', 'admin.meet-event-requests.index', 'meeteventrequest-view', 'ti-users-group', Route::is('admin.meet-event-requests.*') && ! Route::is('admin.meet-event-requests.create')],
-        ['Exhibition / Sponsorship', 'admin.exhibition-requests.index', 'exhibitionrequest-view', 'ti-building-store', Route::is('admin.exhibition-requests.*') && ! Route::is('admin.exhibition-requests.create')],
-        ['Presentations & Small Events', 'admin.presentation-requests.index', 'presentationrequest-view', 'ti-presentation', Route::is('admin.presentation-requests.*') && ! Route::is('admin.presentation-requests.create')],
-        ['Gift & POP', 'admin.gift-pop-requests.index', 'giftpoprequest-view', 'ti-gift', Route::is('admin.gift-pop-requests.*') && ! Route::is('admin.gift-pop-requests.create')],
-        ['Branding Support', 'admin.branding-requests.index', 'brandingrequest-view', 'ti-brush', Route::is('admin.branding-requests.*') && ! Route::is('admin.branding-requests.create')],
-        ['New Experience Centre', 'admin.experience-centre-requests.index', 'experiencecentrerequest-view', 'ti-building', Route::is('admin.experience-centre-requests.*') && ! Route::is('admin.experience-centre-requests.create')],
-    ])->filter(fn ($item) => auth()->user()->can($item[2]));
-    $requestMenus = [
-        ['Raise Request', 'ti-circle-plus', $raiseItems],
-        ['My Requests', 'ti-file-text', $myRequestItems],
-    ];
 @endphp
 {{-- "collapsed" comes from the x-data in layouts/admin.blade.php: icons only, label shown as a tooltip. --}}
 <nav :class="collapsed ? 'lg:px-3' : ''" class="flex-1 overflow-y-auto px-4 py-5 space-y-1">
@@ -53,41 +42,12 @@
     </a>
     @endcan
 
-    @can('approval-view')
-    @php $pendingApprovals = \App\Models\PortalRequest::where('module', 'meet_event')->where('status', 'Request Raised')->count(); @endphp
-    <a href="{{ route('admin.approvals.index') }}" title="Approval Inbox"
+    @foreach ($requestItems as [$label, $route, $permission, $itemIcon])
+    <a href="{{ route($route . '.index') }}" title="{{ $label }}"
        :class="collapsed ? 'lg:justify-center' : ''"
-       class="{{ $link }} {{ Route::is('admin.approvals.*') ? $active : $inactive }}">
-        <i class="ti ti-inbox {{ $icon }}"></i> <span :class="collapsed ? 'lg:hidden' : ''" class="flex-1">Approval Inbox</span>
-        @if ($pendingApprovals)
-            <span :class="collapsed ? 'lg:hidden' : ''" class="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-700">{{ $pendingApprovals }}</span>
-        @endif
+       class="{{ $link }} {{ Route::is($route . '.*') ? $active : $inactive }}">
+        <i class="ti {{ $itemIcon }} {{ $icon }}"></i> <span :class="collapsed ? 'lg:hidden' : ''">{{ $label }}</span>
     </a>
-    @endcan
-
-    @foreach ($requestMenus as [$groupLabel, $groupIcon, $groupItems])
-    @if ($groupItems->isNotEmpty())
-    @php $groupOpen = $groupItems->contains(fn ($item) => $item[4]); @endphp
-    <div x-data="{ open: {{ $groupOpen ? 'true' : 'false' }} }">
-        <button type="button" title="{{ $groupLabel }}"
-                @click="if (collapsed && window.innerWidth >= 1024) { toggleSidebar(); open = true } else { open = ! open }"
-                :class="collapsed ? 'lg:justify-center' : ''"
-                class="{{ $link }} w-full {{ $groupOpen ? 'text-slate-900 font-medium' : $inactive }}">
-            <i class="ti {{ $groupIcon }} {{ $icon }}"></i>
-            <span :class="collapsed ? 'lg:hidden' : ''" class="flex-1 text-left">{{ $groupLabel }}</span>
-            <i :class="[open ? 'rotate-90' : '', collapsed ? 'lg:hidden' : '']" class="ti ti-chevron-right text-slate-400 transition-transform"></i>
-        </button>
-
-        <div x-show="open && ! (collapsed && window.innerWidth >= 1024)" x-transition class="ml-5 mt-1 space-y-1 border-l border-slate-200 pl-3" @if (! $groupOpen) style="display: none;" @endif>
-            @foreach ($groupItems as [$label, $route, $permission, $itemIcon, $isCurrent])
-            <a href="{{ route($route) }}" title="{{ $label }}"
-               class="flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition {{ $isCurrent ? $active : $inactive }}">
-                <i class="ti {{ $itemIcon }} text-lg text-slate-400"></i> <span>{{ $label }}</span>
-            </a>
-            @endforeach
-        </div>
-    </div>
-    @endif
     @endforeach
 
     @can('role-view')

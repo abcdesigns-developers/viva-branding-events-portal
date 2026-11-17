@@ -82,6 +82,26 @@ class PortalRequest extends BaseModel
         'sample' => ['label' => 'Product Sample', 'model' => ProductSample::class],
     ];
 
+    /**
+     * Who works on a Meet request, with the permission that lets a user act as them.
+     * The requester is the request's own user (meeteventrequest-update).
+     */
+    const MEET_ACTORS = [
+        'requester' => ['label' => 'Requester', 'permission' => 'meeteventrequest-update'],
+        'director' => ['label' => 'Director', 'permission' => 'approval-action'],
+        'branding' => ['label' => 'Branding', 'permission' => 'meetplanning-update'],
+        'purchase' => ['label' => 'Purchase', 'permission' => 'purchasetask-update'],
+        'accounts' => ['label' => 'Accounts', 'permission' => 'accountstask-update'],
+        'logistics' => ['label' => 'Logistics', 'permission' => 'logisticstask-update'],
+    ];
+
+    /** The Meet actors a user can work as, from their permissions (requester not included). */
+    public static function meetActorsOf(User $user): array
+    {
+        return collect(self::MEET_ACTORS)->except('requester')
+            ->filter(fn ($actor) => $user->can($actor['permission']))->keys()->all();
+    }
+
     public function user()
     {
         return $this->belongsTo(User::class);
@@ -130,6 +150,71 @@ class PortalRequest extends BaseModel
     public function approvals()
     {
         return $this->hasMany(Approval::class, 'request_id')->latest('id');
+    }
+
+    /** Branding's proposal (Meet Events, after initial approval). */
+    public function proposal()
+    {
+        return $this->hasOne(MeetProposal::class, 'request_id');
+    }
+
+    /** Work released to Purchase, Accounts and Logistics after the final approval. */
+    public function teamTasks()
+    {
+        return $this->hasMany(TeamTask::class, 'request_id')->orderBy('id');
+    }
+
+    /**
+     * Moves a Meet request along PO Ready → Payment Done → Material Ready → Dispatched as the
+     * teams finish. Teams work at the same time, but the status follows this order: it stops
+     * at the first step that is not done yet. Returns the new status when it changed.
+     */
+    public function syncMeetTeamStatus(): ?string
+    {
+        $teamSteps = ['Final Approval', 'PO Ready', 'Payment Done', 'Material Ready', 'Dispatched'];
+        if ($this->module !== 'meet_event' || ! in_array($this->status, $teamSteps, true)) {
+            return null;
+        }
+
+        $tasks = $this->teamTasks()->get()->keyBy('team');
+        $reached = [
+            'PO Ready' => $tasks->get('purchase')?->isDone(),
+            'Payment Done' => $tasks->get('accounts')?->isDone(),
+            'Material Ready' => (bool) $tasks->get('logistics')?->material_ready_at,
+            'Dispatched' => $tasks->get('logistics')?->isDone(),
+        ];
+        $status = 'Final Approval';
+        foreach ($reached as $step => $done) {
+            if (! $done) {
+                break;
+            }
+            $status = $step;
+        }
+
+        // Only forward: a later step never moves the request back.
+        if (array_search($status, $teamSteps) <= array_search($this->status, $teamSteps)) {
+            return null;
+        }
+
+        $from = $this->status;
+        $this->status = $status;
+        $this->stage = self::MEET_STATUSES[$status];
+        $this->save();
+        RequestHistory::create([
+            'request_id' => $this->id,
+            'user_id' => auth()->id(),
+            'action' => 'Status moved to ' . $status,
+            'from_status' => $from,
+            'to_status' => $status,
+        ]);
+
+        return $status;
+    }
+
+    /** Meet statuses in which Branding can still change the proposal. */
+    public function isPlannable(): bool
+    {
+        return $this->module === 'meet_event' && in_array($this->status, ['Initial Approval', 'Branding Planning'], true);
     }
 
     /** The most recent return, to show its remarks to the requester. */

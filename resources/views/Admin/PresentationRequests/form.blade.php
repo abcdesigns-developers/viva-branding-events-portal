@@ -210,25 +210,29 @@
     });
     savedItems.length ? savedItems.forEach(addRow) : addRow();
 
-    // Gifts set on the Meeting Type (Event Types master) come in on their own, quantity = attendees.
-    function lockType(row) {
-        row.addClass('type-locked').find('.item-type')
+    // Gifts set on the Meeting Type (Event Types master) are read-only: type, item and
+    // quantity (= attendees) are set for you, and the row cannot be removed.
+    function lockRow(row) {
+        row.addClass('type-locked');
+        row.find('.item-type, .item-select')
             .addClass('pointer-events-none bg-slate-100 text-slate-500')
             .attr({tabindex: -1, 'aria-disabled': 'true', title: 'Set by Meeting Type'});
+        row.find('.item-qty').prop('readonly', true).addClass('bg-slate-100 text-slate-500').attr('title', 'Same as Attendee Count');
+        row.find('.auto-tag').removeClass('hidden');
+        row.find('.remove-item').css('visibility', 'hidden').prop('disabled', true).attr('tabindex', -1);
     }
+    const typeGiftIds = () => (eventTypeGifts[$('#event_type_id').val()] || [])
+        .filter(id => (itemTypes.gift?.options || []).some(option => option.id == id)).map(String);
     function applyTypeGifts() {
         $('#item-rows .item-row.type-locked').remove();
-        const giftIds = (eventTypeGifts[$('#event_type_id').val()] || [])
-            .filter(id => (itemTypes.gift?.options || []).some(option => option.id == id));
+        const giftIds = typeGiftIds();
         giftIds.forEach(id => {
-            const already = $('#item-rows .item-row').filter(function () {
+            // A gift added by hand that the Meeting Type also gives becomes the locked row.
+            $('#item-rows .item-row').filter(function () {
                 return $(this).find('.item-type').val() === 'gift' && $(this).find('.item-select').val() == id;
-            }).length;
-            if (already) return;
+            }).remove();
             addRow({type: 'gift', item_id: id, quantity: attendees()});
-            const row = $('#item-rows .item-row').last();
-            row.addClass('auto-gift').find('.auto-tag').removeClass('hidden');
-            lockType(row);
+            lockRow($('#item-rows .item-row').last());
         });
         if (giftIds.length) {
             $('#item-rows .item-row').not('.type-locked').filter(function () {
@@ -239,21 +243,16 @@
         renumberRows();
     }
     $('#event_type_id').on('change', applyTypeGifts);
-    // Auto gift quantities follow the attendee count until changed by hand.
-    $('#attendee_count').on('input', () => $('#item-rows .item-row.auto-gift .item-qty').val(attendees()));
-    $(document).on('input change', '.auto-gift .item-qty, .auto-gift .item-select', function () {
-        $(this).closest('.item-row').removeClass('auto-gift').find('.auto-tag').addClass('hidden');
-    });
+    // Meeting Type gifts always follow the attendee count.
+    $('#attendee_count').on('input', () => $('#item-rows .item-row.type-locked .item-qty').val(attendees()));
     if (! savedItems.length && $('#event_type_id').val()) applyTypeGifts();
     if (savedItems.length) {
-        const typeGifts = (eventTypeGifts[$('#event_type_id').val()] || []).map(String);
+        const giftIds = typeGiftIds();
         $('#item-rows .item-row').each(function () {
             const row = $(this);
-            if (row.find('.item-type').val() !== 'gift' || ! typeGifts.includes(row.find('.item-select').val())) return;
-            lockType(row);
-            if (row.find('.item-qty').val() == attendees()) {
-                row.addClass('auto-gift').find('.auto-tag').removeClass('hidden');
-            }
+            if (row.find('.item-type').val() !== 'gift' || ! giftIds.includes(row.find('.item-select').val())) return;
+            lockRow(row);
+            row.find('.item-qty').val(attendees());
         });
     }
 
