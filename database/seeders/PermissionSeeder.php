@@ -354,18 +354,6 @@ class PermissionSeeder extends Seeder
             //End of Role Permission
         ],
         'User' => [],
-        // Approves requests (Vipin Sir gets this role too so he can approve for the Director).
-        'Director' => [
-            'dashboard-view',
-            'approval-view',
-            'approval-action',
-        ],
-        // Management approves Exhibition, Gift & POP, Branding and Experience Centre requests.
-        'Management' => [
-            'dashboard-view',
-            'approval-view',
-            'approval-action',
-        ],
     ];
 
     private $users = [
