@@ -1,6 +1,9 @@
 @php
     $rows = [
-        'Name' => $location->name,
+        'City' => $location->name,
+        'State' => $location->state ?: '-',
+        'Country' => $location->country,
+        'Zone' => $location->zone?->name ?? '-',
         'Created' => $location->created_at?->format('d M Y, h:i A'),
         'Created By' => $location->createdBy?->name ?? '-',
     ];

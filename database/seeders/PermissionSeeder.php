@@ -254,6 +254,13 @@ class PermissionSeeder extends Seeder
                 'experiencecentrerequest-update' => ['edit', 'update'],
             ]
         ],
+        'Stock' => [
+            'controller' => 'Admin\StockController',
+            'permissions' => [
+                'stock-view' => ['index', 'show'],
+                'stock-update' => ['store'],
+            ]
+        ],
         //End of Permission Arr
     ];
 
@@ -380,6 +387,10 @@ class PermissionSeeder extends Seeder
             'experiencecentrerequest-view',
             'experiencecentrerequest-store',
             'experiencecentrerequest-update',
+
+            #Stock
+            'stock-view',
+            'stock-update',
 
             //End of Role Permission
         ],

@@ -30,6 +30,8 @@
                     <th>Email</th>
                     <th>Mobile</th>
                     <th>Role</th>
+                    <th>Location</th>
+                    <th>Zone</th>
                 </tr>
             </thead>
         </table>
@@ -60,6 +62,8 @@
                 {data: 'email', name: 'user.email'},
                 {data: 'mobile', name: 'user.mobile'},
                 {data: 'role', name: 'role', orderable: false, searchable: false},
+                {data: 'location', name: 'location', orderable: false, searchable: false},
+                {data: 'zone', name: 'zone', orderable: false, searchable: false},
             ],
             order: [],
             columnDefs: [

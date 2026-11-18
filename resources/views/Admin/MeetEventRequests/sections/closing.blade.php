@@ -9,7 +9,7 @@
         @if ($closingFiles->isNotEmpty())
             <div class="flex flex-wrap gap-2">
                 @foreach ($closingFiles as $file)
-                    <a href="{{ $docUrl($file) }}" class="inline-flex items-center gap-1 rounded-full bg-slate-100 px-3 py-1 text-xs text-slate-700 hover:bg-slate-200"><i class="ti {{ $docIcons[$file->type] }}"></i> {{ $docLabels[$file->type] }}: {{ $file->original_name }}</a>
+                    <a href="{{ $docUrl($file) }}" target="_blank" rel="noopener" class="inline-flex items-center gap-1 rounded-full bg-slate-100 px-3 py-1 text-xs text-slate-700 hover:bg-slate-200"><i class="ti {{ $docIcons[$file->type] }}"></i> {{ $docLabels[$file->type] }}: {{ $file->original_name }}</a>
                 @endforeach
             </div>
             @if ($completedNote?->remarks)

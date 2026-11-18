@@ -139,6 +139,11 @@ Route::middleware(['auth', 'admin', 'preventBackHistory'])->group(function () {
         Route::post('meet-event-requests/data', [MeetEventRequestController::class, 'data'])->name('meet-event-requests.data');
         Route::get('meet-event-requests/{portal_request}/documents/{request_document}', [MeetEventRequestController::class, 'document'])->name('meet-event-requests.document');
 
+        //Stock ledger (Gift, POP, Catalogue, Sample)
+        Route::get('stock', [\App\Http\Controllers\Admin\StockController::class, 'index'])->name('stock.index');
+        Route::post('stock', [\App\Http\Controllers\Admin\StockController::class, 'store'])->name('stock.store');
+        Route::get('stock/{type}/{id}', [\App\Http\Controllers\Admin\StockController::class, 'show'])->name('stock.show')->whereNumber('id');
+
         //Meet Events – work done on the request page ({portal_request} / {team_task} are Hashids keys)
         //Branding: plan, event ready, completed, closed
         Route::post('meet-plannings/{portal_request}', [MeetPlanningController::class, 'store'])->name('meet-plannings.store');
@@ -164,9 +169,12 @@ Route::middleware(['auth', 'admin', 'preventBackHistory'])->group(function () {
         Route::post('approvals/{portal_request}/return', [ApprovalController::class, 'sendBack'])->name('approvals.return');
 
         //Requests – Events / Exhibitions / Sponsorship
-        Route::resource('exhibition-requests', ExhibitionRequestController::class)->parameters(['exhibition-requests' => 'portal_request'])->except(['destroy']);
-        Route::post('exhibition-requests/data', [ExhibitionRequestController::class, 'data'])->name('exhibition-requests.data');
-        Route::get('exhibition-requests/{portal_request}/documents/{request_document}', [ExhibitionRequestController::class, 'document'])->name('exhibition-requests.document');
+        // Phase 2 module: 404 until PORTAL_PHASE2=true
+        Route::middleware('phase2')->group(function () {
+            Route::resource('exhibition-requests', ExhibitionRequestController::class)->parameters(['exhibition-requests' => 'portal_request'])->except(['destroy']);
+            Route::post('exhibition-requests/data', [ExhibitionRequestController::class, 'data'])->name('exhibition-requests.data');
+            Route::get('exhibition-requests/{portal_request}/documents/{request_document}', [ExhibitionRequestController::class, 'document'])->name('exhibition-requests.document');
+        });
 
         //Requests – Presentations & Small Events
         Route::resource('presentation-requests', PresentationRequestController::class)->parameters(['presentation-requests' => 'portal_request'])->except(['destroy']);
@@ -178,14 +186,20 @@ Route::middleware(['auth', 'admin', 'preventBackHistory'])->group(function () {
         Route::post('gift-pop-requests/data', [GiftPopRequestController::class, 'data'])->name('gift-pop-requests.data');
 
         //Requests – Branding Support & Trade Marketing
-        Route::resource('branding-requests', BrandingRequestController::class)->parameters(['branding-requests' => 'portal_request'])->except(['destroy']);
-        Route::post('branding-requests/data', [BrandingRequestController::class, 'data'])->name('branding-requests.data');
-        Route::get('branding-requests/{portal_request}/documents/{request_document}', [BrandingRequestController::class, 'document'])->name('branding-requests.document');
+        // Phase 2 module: 404 until PORTAL_PHASE2=true
+        Route::middleware('phase2')->group(function () {
+            Route::resource('branding-requests', BrandingRequestController::class)->parameters(['branding-requests' => 'portal_request'])->except(['destroy']);
+            Route::post('branding-requests/data', [BrandingRequestController::class, 'data'])->name('branding-requests.data');
+            Route::get('branding-requests/{portal_request}/documents/{request_document}', [BrandingRequestController::class, 'document'])->name('branding-requests.document');
+        });
 
         //Requests – New Experience Centre
-        Route::resource('experience-centre-requests', ExperienceCentreRequestController::class)->parameters(['experience-centre-requests' => 'portal_request'])->except(['destroy']);
-        Route::post('experience-centre-requests/data', [ExperienceCentreRequestController::class, 'data'])->name('experience-centre-requests.data');
-        Route::get('experience-centre-requests/{portal_request}/documents/{request_document}', [ExperienceCentreRequestController::class, 'document'])->name('experience-centre-requests.document');
+        // Phase 2 module: 404 until PORTAL_PHASE2=true
+        Route::middleware('phase2')->group(function () {
+            Route::resource('experience-centre-requests', ExperienceCentreRequestController::class)->parameters(['experience-centre-requests' => 'portal_request'])->except(['destroy']);
+            Route::post('experience-centre-requests/data', [ExperienceCentreRequestController::class, 'data'])->name('experience-centre-requests.data');
+            Route::get('experience-centre-requests/{portal_request}/documents/{request_document}', [ExperienceCentreRequestController::class, 'document'])->name('experience-centre-requests.document');
+        });
 
         //End of File
     });

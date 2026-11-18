@@ -137,7 +137,7 @@ class MeetEventRequestController extends Controller
         $this->authorizeRequest($portalRequest);
         abort_unless($requestDocument->request_id == $portalRequest->id, 404);
 
-        return Storage::disk('local')->download($requestDocument->file_path, $requestDocument->original_name);
+        return Storage::disk('local')->response($requestDocument->file_path, $requestDocument->original_name, ['X-Content-Type-Options' => 'nosniff']);
     }
 
     /** The static "Meet Events" event (created by EventSeeder); every request here belongs to it. */
@@ -273,14 +273,7 @@ class MeetEventRequestController extends Controller
     /** Next Request ID for this module and year, e.g. MEET-2026-0001. */
     private function nextRequestNo(): string
     {
-        $prefix = PortalRequest::MODULE_CODES[self::MODULE] . '-' . now()->year . '-';
-        $last = PortalRequest::where('request_no', 'like', $prefix . '%')
-            ->lockForUpdate()
-            ->orderByDesc('request_no')
-            ->value('request_no');
-        $next = $last ? ((int) substr($last, strlen($prefix))) + 1 : 1;
-
-        return $prefix . str_pad($next, 4, '0', STR_PAD_LEFT);
+        return \App\Support\RequestNumber::next(self::MODULE);
     }
 
     /** Files are kept per request; a new upload of the same type becomes the next version. */

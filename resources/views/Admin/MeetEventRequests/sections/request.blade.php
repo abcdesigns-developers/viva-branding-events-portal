@@ -8,6 +8,8 @@
         'Guests' => $portalRequest->total_guests,
         'Team Strength' => $portalRequest->team_strength,
         'Raised By' => $portalRequest->user?->name,
+        'Requester Location' => $portalRequest->user?->location_label,
+        'Zone / Region' => collect([$portalRequest->zone?->name, $portalRequest->user?->region])->filter()->implode(' / ') ?: '-',
         'Submitted On' => $portalRequest->submitted_at?->format('d-m-Y, h:i A'),
     ];
 @endphp

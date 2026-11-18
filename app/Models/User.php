@@ -23,6 +23,11 @@ class User extends Authenticatable
         'name',
         'email',
         'mobile',
+        'city',
+        'state',
+        'country',
+        'region',
+        'zone_id',
         'password',
         'status',
     ];
@@ -50,6 +55,14 @@ class User extends Authenticatable
         ];
     }
 
+    /** URL of the profile photo (served privately, cache-busted), or null for the letter avatar. */
+    public function getPhotoUrlAttribute(): ?string
+    {
+        return $this->profile_photo
+            ? route('profile.photo', ['user' => $this->route_key]) . '?v=' . ($this->updated_at?->timestamp ?? 1)
+            : null;
+    }
+
     public function getchildrens()
     {
         $currentUserId = $this->id;
@@ -67,5 +80,16 @@ class User extends Authenticatable
             }
         }
         return $ids;
+    }
+
+    public function zone()
+    {
+        return $this->belongsTo(Zone::class);
+    }
+
+    /** "Pune, Maharashtra, India" or "-" when nothing is filled. */
+    public function getLocationLabelAttribute(): string
+    {
+        return collect([$this->city, $this->state, $this->country])->filter()->implode(', ') ?: '-';
     }
 }

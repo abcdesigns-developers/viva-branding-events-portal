@@ -15,7 +15,7 @@
         @endif
         @foreach ($decisions as $approval)
             <div class="rounded-lg border px-3 py-2 {{ $approval->action == 'Approved' ? 'border-emerald-200 bg-emerald-50' : 'border-rose-200 bg-rose-50' }}">
-                <p class="font-medium {{ $approval->action == 'Approved' ? 'text-emerald-800' : 'text-rose-800' }}">{{ $approval->action }} by {{ $approval->user?->name ?? 'Director' }} · {{ $approval->created_at->format('d-m-Y, h:i A') }}</p>
+                <p class="font-medium {{ $approval->action == 'Approved' ? 'text-emerald-800' : 'text-rose-800' }}">{{ $approval->action }} by {{ $approval->user?->name ?? 'Director' }}@if ($approval->user?->hasRole('Approving Authority')) (on behalf of Director)@endif · {{ $approval->created_at->format('d-m-Y, h:i A') }}</p>
                 @if ($approval->remarks)
                     <p class="mt-1 whitespace-pre-line text-slate-700">{{ $approval->remarks }}</p>
                 @endif

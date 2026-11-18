@@ -15,6 +15,7 @@ return Application::configure(basePath: dirname(__DIR__))
 
         $middleware->alias([
             'admin' => \App\Http\Middleware\Admin::class,
+            'phase2' => \App\Http\Middleware\EnsurePhase2Enabled::class,
             'preventBackHistory' => \App\Http\Middleware\PreventBackHistory::class,
         ]);
 

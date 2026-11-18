@@ -2,6 +2,8 @@
 
 namespace App\Providers;
 
+use App\Support\PortalMenu;
+use Illuminate\Support\Facades\View;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Str;
@@ -23,6 +25,15 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         $this->registerRouteBindings(app_path('Models'), 'App\\Models\\');
+
+        // Sidebar and "New request" menu, filtered by the signed-in user's permissions.
+        View::composer('layouts.admin', function ($view) {
+            $user = auth()->user();
+            $view->with('portalMenu', PortalMenu::for($user));
+            // Bell: unread count and the latest few.
+            $view->with('bellUnread', $user ? $user->unreadNotifications()->count() : 0);
+            $view->with('bellItems', $user ? $user->notifications()->limit(6)->get() : collect());
+        });
     }
 
     /**

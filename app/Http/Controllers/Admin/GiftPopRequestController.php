@@ -139,7 +139,7 @@ class GiftPopRequestController extends Controller
     private function visibleRequests()
     {
         $query = PortalRequest::where('module', self::MODULE);
-        if (! auth()->user()->hasRole('SuperAdmin')) {
+        if (! PortalRequest::seesAll(auth()->user())) {
             $query->where('user_id', auth()->id());
         }
 
@@ -149,7 +149,7 @@ class GiftPopRequestController extends Controller
     private function authorizeRequest(PortalRequest $portalRequest)
     {
         abort_unless($portalRequest->module == self::MODULE, 404);
-        abort_unless(auth()->user()->hasRole('SuperAdmin') || $portalRequest->user_id == auth()->id(), 403);
+        abort_unless(PortalRequest::seesAll(auth()->user()) || $portalRequest->user_id == auth()->id(), 403);
     }
 
     /**
@@ -236,14 +236,7 @@ class GiftPopRequestController extends Controller
     /** Next Request ID for this module and year, e.g. GIFT-2026-0001. */
     private function nextRequestNo(): string
     {
-        $prefix = PortalRequest::MODULE_CODES[self::MODULE] . '-' . now()->year . '-';
-        $last = PortalRequest::where('request_no', 'like', $prefix . '%')
-            ->lockForUpdate()
-            ->orderByDesc('request_no')
-            ->value('request_no');
-        $next = $last ? ((int) substr($last, strlen($prefix))) + 1 : 1;
-
-        return $prefix . str_pad($next, 4, '0', STR_PAD_LEFT);
+        return \App\Support\RequestNumber::next(self::MODULE);
     }
 
     private function addHistory(PortalRequest $portalRequest, string $action, ?string $from, ?string $to): void

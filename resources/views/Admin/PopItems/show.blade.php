@@ -1,6 +1,7 @@
 @php
     $rows = [
         'Name' => $popItem->name,
+        'Unit cost' => $popItem->unit_cost !== null ? '₹ ' . number_format((float) $popItem->unit_cost, 2) : 'Not set',
         'Created' => $popItem->created_at?->format('d M Y, h:i A'),
         'Created By' => $popItem->createdBy?->name ?? '-',
     ];

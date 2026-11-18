@@ -94,7 +94,11 @@ class GuestCategoryController extends Controller
     public function destroy(GuestCategory $guestCategory)
     {
         $name = $guestCategory->name;
-        $guestCategory->delete();
+        try {
+            $guestCategory->delete();
+        } catch (\Illuminate\Database\QueryException $e) {
+            return response()->json(['status' => 'error', 'message' => 'This item is used by existing requests or records, so it cannot be deleted. Mark it Inactive instead.'], 422);
+        }
 
         return response()->json([
             'status' => 'success',

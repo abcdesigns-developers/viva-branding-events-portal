@@ -14,9 +14,29 @@
         <div class="card-body">
             <div class="grid gap-5 md:grid-cols-2">
                 <div>
-                    <label for="name" class="form-label">Name</label>
-                    <input type="text" id="name" class="form-control" placeholder="Name" name="name" value="{{ $location->name ?? '' }}"/>
+                    <label for="name" class="form-label">City</label>
+                    <input type="text" id="name" class="form-control" placeholder="City" name="name" value="{{ $location->name ?? '' }}"/>
                     <div id="name-error" class="form-error"></div>
+                </div>
+                <div>
+                    <label for="state" class="form-label">State</label>
+                    <input type="text" id="state" class="form-control" placeholder="State" name="state" value="{{ $location->state ?? '' }}"/>
+                    <div id="state-error" class="form-error"></div>
+                </div>
+                <div>
+                    <label for="country" class="form-label">Country</label>
+                    <input type="text" id="country" class="form-control" placeholder="Country" name="country" value="{{ $location->country ?? 'India' }}"/>
+                    <div id="country-error" class="form-error"></div>
+                </div>
+                <div>
+                    <label for="zone_id" class="form-label">Zone <span class="text-xs text-slate-400">(India only)</span></label>
+                    <select id="zone_id" class="form-control" name="zone_id">
+                        <option value="">No zone</option>
+                        @foreach ($zones as $zone)
+                            <option value="{{ $zone->id }}" @selected(($location->zone_id ?? null) == $zone->id)>{{ $zone->name }}</option>
+                        @endforeach
+                    </select>
+                    <div id="zone_id-error" class="form-error"></div>
                 </div>
             </div>
         </div>

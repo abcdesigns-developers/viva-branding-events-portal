@@ -11,6 +11,7 @@ use App\Http\Requests\DepartmentUpdateRequest;
 use App\Models\Department;
 use App\Models\Role;
 use App\Models\User;
+use App\Models\Zone;
 
 class DepartmentController extends Controller
 {
@@ -21,7 +22,7 @@ class DepartmentController extends Controller
 
     public function data(Request $request)
     {
-        $query = Department::with('user.roles');
+        $query = Department::with('user.roles', 'user.zone');
         if ($request->filled('status')) {
             $query->whereHas('user', fn ($user) => $user->where('status', $request->status));
         }
@@ -35,6 +36,12 @@ class DepartmentController extends Controller
             })
             ->addColumn('mobile', function ($department) {
                 return $department->user->mobile;
+            })
+            ->addColumn('location', function ($department) {
+                return $department->user->location_label;
+            })
+            ->addColumn('zone', function ($department) {
+                return $department->user->zone?->name ?? '-';
             })
             ->addColumn('role', function ($department) {
                 return $department->user->getRoleNames()->implode(', ');
@@ -68,7 +75,7 @@ class DepartmentController extends Controller
     public function create()
     {
         $roles = $this->roles();
-        return view('Admin.Departments.form', compact('roles'));
+        return view('Admin.Departments.form', ['roles' => $roles, 'zones' => $this->zones()]);
     }
 
     public function store(DepartmentStoreRequest $request)
@@ -80,6 +87,11 @@ class DepartmentController extends Controller
                 'name' => $data['name'],
                 'email' => $data['email'],
                 'mobile' => $data['mobile'],
+                'city' => $data['city'] ?? null,
+                'state' => $data['state'] ?? null,
+                'country' => $data['country'] ?? null,
+                'region' => $data['region'] ?? null,
+                'zone_id' => in_array(Role::find($data['role_id'])?->name, config('portal.zone_roles'), true) ? ($data['zone_id'] ?? null) : null,
                 'password' => $data['password'],
                 'status' => 'ACTIVE',
             ]);
@@ -103,7 +115,7 @@ class DepartmentController extends Controller
     public function edit(Department $department)
     {
         $roles = $this->roles();
-        return view('Admin.Departments.form', compact('department', 'roles'));
+        return view('Admin.Departments.form', ['department' => $department, 'roles' => $roles, 'zones' => $this->zones()]);
     }
 
     public function update(DepartmentUpdateRequest $request, Department $department)
@@ -116,6 +128,11 @@ class DepartmentController extends Controller
                 'name' => $data['name'],
                 'email' => $data['email'],
                 'mobile' => $data['mobile'],
+                'city' => $data['city'] ?? null,
+                'state' => $data['state'] ?? null,
+                'country' => $data['country'] ?? null,
+                'region' => $data['region'] ?? null,
+                'zone_id' => in_array(Role::find($data['role_id'])?->name, config('portal.zone_roles'), true) ? ($data['zone_id'] ?? null) : null,
             ]);
             // Blank password on edit keeps the current one.
             if (! empty($data['password'])) {
@@ -162,6 +179,11 @@ class DepartmentController extends Controller
             'message' => $user->name . ' has marked ' . $user->status . ' successfully',
             'department' => $department
         ], 201);
+    }
+
+    private function zones()
+    {
+        return Zone::where('status', 'ACTIVE')->orderBy('name')->get();
     }
 
     private function roles()

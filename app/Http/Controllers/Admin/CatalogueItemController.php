@@ -98,7 +98,11 @@ class CatalogueItemController extends Controller
     public function destroy(CatalogueItem $catalogueItem)
     {
         $name = $catalogueItem->name;
-        $catalogueItem->delete();
+        try {
+            $catalogueItem->delete();
+        } catch (\Illuminate\Database\QueryException $e) {
+            return response()->json(['status' => 'error', 'message' => 'This item is used by existing requests or records, so it cannot be deleted. Mark it Inactive instead.'], 422);
+        }
 
         return response()->json([
             'status' => 'success',

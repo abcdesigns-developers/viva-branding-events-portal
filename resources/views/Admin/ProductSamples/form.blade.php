@@ -18,6 +18,11 @@
                     <input type="text" id="name" class="form-control" placeholder="Name" name="name" value="{{ $productSample->name ?? '' }}"/>
                     <div id="name-error" class="form-error"></div>
                 </div>
+                <div>
+                    <label for="unit_cost" class="form-label">Unit cost (₹, optional)</label>
+                    <input type="number" step="0.01" min="0" id="unit_cost" class="form-control" placeholder="e.g. 450" name="unit_cost" value="{{ $productSample->unit_cost ?? '' }}"/>
+                    <div id="unit_cost-error" class="form-error"></div>
+                </div>
             </div>
         </div>
         <div class="card-footer">

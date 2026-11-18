@@ -102,6 +102,57 @@ class PortalRequest extends BaseModel
             ->filter(fn ($actor) => $user->can($actor['permission']))->keys()->all();
     }
 
+    /** SuperAdmin and the working teams (Director, Branding, Purchase, Accounts, Logistics) see every request. */
+    public static function seesAll(User $user): bool
+    {
+        return $user->hasRole('SuperAdmin') || self::meetActorsOf($user) !== [];
+    }
+
+    /** Section names for messages. */
+    const MODULE_LABELS = [
+        'meet_event' => 'Meet Event', 'exhibition' => 'Exhibition', 'presentation' => 'Presentation',
+        'gift_pop' => 'Gift & POP', 'branding' => 'Branding Support', 'experience_centre' => 'Experience Centre',
+    ];
+
+    /** Route prefix of each module's screens. */
+    const MODULE_ROUTES = [
+        'meet_event' => 'admin.meet-event-requests', 'exhibition' => 'admin.exhibition-requests',
+        'presentation' => 'admin.presentation-requests', 'gift_pop' => 'admin.gift-pop-requests',
+        'branding' => 'admin.branding-requests', 'experience_centre' => 'admin.experience-centre-requests',
+    ];
+
+    public function getModuleLabelAttribute(): string
+    {
+        return self::MODULE_LABELS[$this->module] ?? ucfirst($this->module);
+    }
+
+    /** Page of this request on its own module's screen. */
+    public function showUrl(): string
+    {
+        return route(self::MODULE_ROUTES[$this->module] . '.show', ['portal_request' => $this->route_key]);
+    }
+
+    protected static function booted(): void
+    {
+        // Bell and email to whoever acts next, once the change is saved.
+        static::saved(function (PortalRequest $request) {
+            $moved = $request->wasChanged('status') || $request->wasChanged('submitted_at');
+            if ($moved) {
+                \Illuminate\Support\Facades\DB::afterCommit(fn () => \App\Support\RequestNotifier::handle($request));
+            }
+        });
+
+        // A request carries its requester's zone when the form did not set one.
+        static::creating(function (PortalRequest $request) {
+            if (! $request->zone_id && $request->user_id) {
+                $request->zone_id = User::whereKey($request->user_id)->value('zone_id');
+            }
+            if (! $request->zone_id && $request->location_id) {
+                $request->zone_id = Location::whereKey($request->location_id)->value('zone_id');
+            }
+        });
+    }
+
     public function user()
     {
         return $this->belongsTo(User::class);
@@ -135,6 +186,15 @@ class PortalRequest extends BaseModel
     public function items()
     {
         return $this->hasMany(RequestItem::class, 'request_id');
+    }
+
+    /** Approximate value of the items (quantity x the rate on each line); null when no line has a rate. */
+    public function itemsValue(): ?float
+    {
+        $this->loadMissing('items');
+        $priced = $this->items->filter(fn ($row) => $row->unit_cost !== null);
+
+        return $priced->isEmpty() ? null : (float) $priced->sum(fn ($row) => $row->lineValue());
     }
 
     public function documents()

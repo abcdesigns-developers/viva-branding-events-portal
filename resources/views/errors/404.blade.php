@@ -1,0 +1,5 @@
+@extends('errors.layout')
+@section('title', 'Not found')
+@section('code', '404')
+@section('heading', 'We could not find that page')
+@section('message', 'The link may be old or the request may have been removed.')

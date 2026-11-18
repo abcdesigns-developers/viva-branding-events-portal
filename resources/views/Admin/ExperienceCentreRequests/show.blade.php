@@ -10,6 +10,8 @@
         'City / Location' => $portalRequest->location?->name,
         'Target Opening Date' => $portalRequest->required_by?->format('d-m-Y'),
         'Raised By' => $portalRequest->user?->name,
+        'Requester Location' => $portalRequest->user?->location_label,
+        'Zone / Region' => collect([$portalRequest->zone?->name, $portalRequest->user?->region])->filter()->implode(' / ') ?: '-',
         'Submitted On' => $portalRequest->submitted_at?->format('d-m-Y, h:i A'),
         'Business Rationale' => $portalRequest->objective,
     ];
@@ -117,7 +119,7 @@
                 <div class="card-header"><h3 class="card-title">Site photos / layout</h3></div>
                 <div class="card-body space-y-2 text-sm">
                     @forelse ($photos as $photo)
-                        <a href="{{ route('admin.experience-centre-requests.document', ['portal_request' => $portalRequest->route_key, 'request_document' => $photo->id]) }}" class="flex items-center gap-2 rounded-lg px-2 py-1.5 hover:bg-slate-50">
+                        <a href="{{ route('admin.experience-centre-requests.document', ['portal_request' => $portalRequest->route_key, 'request_document' => $photo->id]) }}" target="_blank" rel="noopener" class="flex items-center gap-2 rounded-lg px-2 py-1.5 hover:bg-slate-50">
                             <i class="ti ti-photo text-lg text-indigo-600"></i>
                             <span class="flex-1 truncate">{{ $photo->original_name }}</span>
                             <span class="text-xs text-slate-500">{{ $photo->created_at->format('d-m-Y') }}</span>

@@ -117,7 +117,7 @@
                 <div class="card-header"><h3 class="card-title">Documents</h3></div>
                 <div class="card-body space-y-2 text-sm">
                     @forelse ($portalRequest->documents->sortBy(['type', 'version']) as $document)
-                        <a href="{{ $docUrl($document) }}" class="flex items-center gap-2 rounded-lg px-2 py-1.5 hover:bg-slate-50">
+                        <a href="{{ $docUrl($document) }}" target="_blank" rel="noopener" class="flex items-center gap-2 rounded-lg px-2 py-1.5 hover:bg-slate-50">
                             <i class="ti {{ $docIcons[$document->type] ?? 'ti-file' }} text-lg text-indigo-600"></i>
                             <span class="flex-1 truncate">{{ $document->original_name }}</span>
                             <span class="whitespace-nowrap text-xs text-slate-500">{{ $docLabels[$document->type] ?? $document->type }} v{{ $document->version }}</span>

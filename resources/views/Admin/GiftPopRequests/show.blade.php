@@ -11,6 +11,8 @@
         'Location' => $portalRequest->location?->name,
         'Required By' => $portalRequest->required_by?->format('d-m-Y'),
         'Raised By' => $portalRequest->user?->name,
+        'Requester Location' => $portalRequest->user?->location_label,
+        'Zone / Region' => collect([$portalRequest->zone?->name, $portalRequest->user?->region])->filter()->implode(' / ') ?: '-',
         'Submitted On' => $portalRequest->submitted_at?->format('d-m-Y, h:i A'),
     ];
 @endphp
@@ -46,6 +48,10 @@
     </div>
     @endunless
 
+    @unless ($isDraft)
+        @include('Admin.partials.flow')
+    @endunless
+
     <div class="grid gap-5 lg:grid-cols-3">
         <div class="space-y-5 lg:col-span-2">
             <div class="card">
@@ -65,13 +71,14 @@
             </div>
 
             <div class="card">
-                <div class="card-header"><h3 class="card-title">Items required</h3><span class="text-sm text-slate-500">Total qty {{ $portalRequest->items->sum('quantity') }}</span></div>
+                <div class="card-header"><h3 class="card-title">Items required</h3><span class="text-sm text-slate-500">Total qty {{ $portalRequest->items->sum('quantity') }}@if ($portalRequest->itemsValue() !== null) · Approx. value <strong class="text-slate-800">₹{{ number_format($portalRequest->itemsValue(), 2) }}</strong>@endif</span></div>
                 <div class="card-body">
                     @forelse ($portalRequest->items as $item)
-                        <div class="grid grid-cols-3 border-b border-slate-100 py-2 text-sm last:border-0">
+                        <div class="grid grid-cols-[1fr_2fr_auto_auto] items-baseline gap-x-4 border-b border-slate-100 py-2 text-sm last:border-0">
                             <span class="text-slate-500">{{ $item->typeLabel() }}</span>
                             <span>{{ $item->item()?->name ?? '-' }}</span>
-                            <span class="text-right font-medium">{{ $item->quantity }}</span>
+                            <span class="text-right font-medium">{{ $item->quantity }}@if ($item->unit_cost !== null) <span class="font-normal text-slate-400">× ₹{{ number_format((float) $item->unit_cost, 2) }}</span>@endif</span>
+                            <span class="w-24 text-right tabular-nums text-slate-700">{{ $item->lineValue() !== null ? '₹' . number_format($item->lineValue(), 2) : '' }}</span>
                         </div>
                     @empty
                         <p class="text-sm text-slate-500">No items added.</p>

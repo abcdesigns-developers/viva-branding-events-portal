@@ -143,7 +143,7 @@ class ExperienceCentreRequestController extends Controller
         $this->authorizeRequest($portalRequest);
         abort_unless($requestDocument->request_id == $portalRequest->id, 404);
 
-        return Storage::disk('local')->download($requestDocument->file_path, $requestDocument->original_name);
+        return Storage::disk('local')->response($requestDocument->file_path, $requestDocument->original_name, ['X-Content-Type-Options' => 'nosniff']);
     }
 
     /** The static "New Experience Centre" event (created by EventSeeder). */
@@ -258,14 +258,7 @@ class ExperienceCentreRequestController extends Controller
     /** Next Request ID for this module and year, e.g. EXPC-2026-0001. */
     private function nextRequestNo(): string
     {
-        $prefix = PortalRequest::MODULE_CODES[self::MODULE] . '-' . now()->year . '-';
-        $last = PortalRequest::where('request_no', 'like', $prefix . '%')
-            ->lockForUpdate()
-            ->orderByDesc('request_no')
-            ->value('request_no');
-        $next = $last ? ((int) substr($last, strlen($prefix))) + 1 : 1;
-
-        return $prefix . str_pad($next, 4, '0', STR_PAD_LEFT);
+        return \App\Support\RequestNumber::next(self::MODULE);
     }
 
     /** Each uploaded file is kept with the request; files are numbered in upload order. */

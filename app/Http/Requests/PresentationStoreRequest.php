@@ -54,7 +54,10 @@ class PresentationStoreRequest extends FormRequest
                     if (! isset(PortalRequest::ITEM_TYPES[$type]) || $validator->errors()->has("items.$index.item_id")) {
                         continue;
                     }
-                    if (! PortalRequest::ITEM_TYPES[$type]['model']::whereKey($item['item_id'] ?? 0)->exists()) {
+                    $keep = $this->route('portal_request')?->items()->where('item_type', $type)->pluck('item_id')->all() ?? [];
+                    $valid = PortalRequest::ITEM_TYPES[$type]['model']::whereKey($item['item_id'] ?? 0)
+                        ->where(fn ($query) => $query->where('status', 'ACTIVE')->orWhereIn('id', $keep))->exists();
+                    if (! $valid) {
                         $validator->errors()->add("items.$index.item_id", 'Please select a valid item');
                     }
                 }

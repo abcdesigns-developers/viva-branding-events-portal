@@ -18,12 +18,13 @@ class LocationController extends Controller
 
     public function data(Request $request)
     {
-        $query = Location::query();
+        $query = Location::with('zone');
         if ($request->filled('status')) {
             $query->where('status', $request->status);
         }
 
         return DataTables::eloquent($query)
+            ->addColumn('zone', fn ($location) => $location->zone?->name ?? '-')
             ->addColumn('status', function ($location) {
                 $checked = $location->status == 'ACTIVE' ? 'checked' : '';
                 return '<label class="relative inline-flex cursor-pointer items-center" title="Active / Inactive">'
@@ -52,7 +53,7 @@ class LocationController extends Controller
 
     public function create()
     {
-        return view('Admin.Locations.form');
+        return view('Admin.Locations.form', ['zones' => \App\Models\Zone::where('status', 'ACTIVE')->orderBy('name')->get()]);
     }
 
     public function store(LocationStoreRequest $request)
@@ -75,7 +76,7 @@ class LocationController extends Controller
 
     public function edit(Location $location)
     {
-        return view('Admin.Locations.form', compact('location'));
+        return view('Admin.Locations.form', ['location' => $location, 'zones' => \App\Models\Zone::where('status', 'ACTIVE')->orderBy('name')->get()]);
     }
 
     public function update(LocationUpdateRequest $request, Location $location)
@@ -94,7 +95,11 @@ class LocationController extends Controller
     public function destroy(Location $location)
     {
         $name = $location->name;
-        $location->delete();
+        try {
+            $location->delete();
+        } catch (\Illuminate\Database\QueryException $e) {
+            return response()->json(['status' => 'error', 'message' => 'This item is used by existing requests or records, so it cannot be deleted. Mark it Inactive instead.'], 422);
+        }
 
         return response()->json([
             'status' => 'success',

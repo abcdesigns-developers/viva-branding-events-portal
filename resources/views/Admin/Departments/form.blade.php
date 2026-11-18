@@ -14,7 +14,7 @@
             <h2 class="card-title">{{ $isCreate ? 'Create' : 'Edit' }} Department</h2>
         </div>
         <div class="card-body">
-            <div class="grid gap-5 md:grid-cols-2">
+            <div class="grid gap-5 md:grid-cols-2" x-data="{ role: '{{ $user?->roles->first()?->name }}', locRoles: @js(config('portal.requester_roles')), zoneRoles: @js(config('portal.zone_roles')) }">
                 <div>
                     <label for="name" class="form-label">Name</label>
                     <input type="text" id="name" class="form-control" placeholder="Name" name="name" value="{{ $user->name ?? '' }}"/>
@@ -32,13 +32,47 @@
                 </div>
                 <div>
                     <label for="role_id" class="form-label">Role</label>
-                    <select id="role_id" class="form-control" name="role_id">
+                    <select id="role_id" class="form-control" name="role_id" @change="role = $event.target.selectedOptions[0].dataset.name || ''">
                         <option value="">Select Role</option>
                         @foreach ($roles as $role)
-                            <option value="{{ $role->id }}" @selected($currentRoleId == $role->id)>{{ $role->name }}</option>
+                            <option value="{{ $role->id }}" data-name="{{ $role->name }}" @selected($currentRoleId == $role->id)>{{ $role->name }}</option>
                         @endforeach
                     </select>
                     <div id="role_id-error" class="form-error"></div>
+                </div>
+                <div class="md:col-span-2 border-t border-slate-100 pt-5" x-show="locRoles.includes(role)" x-cloak>
+                    <p class="text-sm font-semibold text-slate-800">Location</p>
+                    <p class="text-xs text-slate-500">Used on every request this person raises.</p>
+                </div>
+                <div x-show="locRoles.includes(role)" x-cloak>
+                    <label for="city" class="form-label">City</label>
+                    <input type="text" id="city" class="form-control" name="city" placeholder="City" value="{{ $user->city ?? '' }}"/>
+                    <div id="city-error" class="form-error"></div>
+                </div>
+                <div x-show="locRoles.includes(role)" x-cloak>
+                    <label for="state" class="form-label">State</label>
+                    <input type="text" id="state" class="form-control" name="state" placeholder="State" value="{{ $user->state ?? '' }}"/>
+                    <div id="state-error" class="form-error"></div>
+                </div>
+                <div x-show="locRoles.includes(role)" x-cloak>
+                    <label for="country" class="form-label">Country</label>
+                    <input type="text" id="country" class="form-control" name="country" placeholder="Country" value="{{ $user->country ?? 'India' }}"/>
+                    <div id="country-error" class="form-error"></div>
+                </div>
+                <div x-show="locRoles.includes(role)" x-cloak>
+                    <label for="region" class="form-label">Region</label>
+                    <input type="text" id="region" class="form-control" name="region" placeholder="e.g. Western Maharashtra" value="{{ $user->region ?? '' }}"/>
+                    <div id="region-error" class="form-error"></div>
+                </div>
+                <div x-show="zoneRoles.includes(role)" x-cloak>
+                    <label for="zone_id" class="form-label">Zone</label>
+                    <select id="zone_id" class="form-control" name="zone_id">
+                        <option value="">Select Zone</option>
+                        @foreach ($zones as $zone)
+                            <option value="{{ $zone->id }}" @selected(($user->zone_id ?? null) == $zone->id)>{{ $zone->name }}</option>
+                        @endforeach
+                    </select>
+                    <div id="zone_id-error" class="form-error"></div>
                 </div>
                 <div>
                     <label for="password" class="form-label">Password</label>

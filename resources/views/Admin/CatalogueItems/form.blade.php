@@ -23,6 +23,11 @@
                     <textarea id="description" class="form-control" rows="4" placeholder="Description" name="description">{{ $catalogueItem->description ?? '' }}</textarea>
                     <div id="description-error" class="form-error"></div>
                 </div>
+                <div>
+                    <label for="unit_cost" class="form-label">Unit cost (₹, optional)</label>
+                    <input type="number" step="0.01" min="0" id="unit_cost" class="form-control" placeholder="e.g. 450" name="unit_cost" value="{{ $catalogueItem->unit_cost ?? '' }}"/>
+                    <div id="unit_cost-error" class="form-error"></div>
+                </div>
             </div>
         </div>
         <div class="card-footer">

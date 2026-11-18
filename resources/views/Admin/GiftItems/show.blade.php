@@ -1,6 +1,7 @@
 @php
     $rows = [
         'Name' => $giftItem->name,
+        'Unit cost' => $giftItem->unit_cost !== null ? '₹ ' . number_format((float) $giftItem->unit_cost, 2) : 'Not set',
         'Created' => $giftItem->created_at?->format('d M Y, h:i A'),
         'Created By' => $giftItem->createdBy?->name ?? '-',
     ];

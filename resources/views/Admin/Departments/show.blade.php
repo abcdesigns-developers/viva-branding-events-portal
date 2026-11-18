@@ -5,6 +5,11 @@
         'Email' => $user->email,
         'Mobile' => $user->mobile,
         'Role' => $user->getRoleNames()->implode(', ') ?: '-',
+        'City' => $user->city ?: '-',
+        'State' => $user->state ?: '-',
+        'Country' => $user->country ?: '-',
+        'Region' => $user->region ?: '-',
+        'Zone' => $user->zone?->name ?: '-',
         'Created' => $department->created_at?->format('d M Y, h:i A'),
         'Created By' => $department->createdBy?->name ?? '-',
     ];

@@ -1,6 +1,7 @@
 @php
     $rows = [
         'Name' => $catalogueItem->name,
+        'Unit cost' => $catalogueItem->unit_cost !== null ? '₹ ' . number_format((float) $catalogueItem->unit_cost, 2) : 'Not set',
         'Description' => $catalogueItem->description ?: '-',
         'Created' => $catalogueItem->created_at?->format('d M Y, h:i A'),
         'Created By' => $catalogueItem->createdBy?->name ?? '-',

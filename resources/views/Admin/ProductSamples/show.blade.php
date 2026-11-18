@@ -1,6 +1,7 @@
 @php
     $rows = [
         'Name' => $productSample->name,
+        'Unit cost' => $productSample->unit_cost !== null ? '₹ ' . number_format((float) $productSample->unit_cost, 2) : 'Not set',
         'Created' => $productSample->created_at?->format('d M Y, h:i A'),
         'Created By' => $productSample->createdBy?->name ?? '-',
     ];

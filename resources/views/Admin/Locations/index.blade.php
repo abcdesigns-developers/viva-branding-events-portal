@@ -26,7 +26,10 @@
                     <th width="5%">#</th>
                     <th width="12%">Actions</th>
                     <th width="8%">Status</th>
-                    <th>Name</th>
+                    <th>City</th>
+                    <th>State</th>
+                    <th>Country</th>
+                    <th>Zone</th>
                 </tr>
             </thead>
         </table>
@@ -54,6 +57,9 @@
                 {data: 'action', name: 'locations.id', orderable: false, searchable: false},
                 {data: 'status', name: 'status', orderable: false, searchable: false},
                 {data: 'name', name: 'name'},
+                {data: 'state', name: 'state'},
+                {data: 'country', name: 'country'},
+                {data: 'zone', name: 'zone', orderable: false, searchable: false},
             ],
             order: [],
             columnDefs: [

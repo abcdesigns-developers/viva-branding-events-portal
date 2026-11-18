@@ -12,6 +12,8 @@
         'Event Location' => $portalRequest->location?->name,
         'Event Date' => $eventDate,
         'Raised By' => $portalRequest->user?->name,
+        'Requester Location' => $portalRequest->user?->location_label,
+        'Zone / Region' => collect([$portalRequest->zone?->name, $portalRequest->user?->region])->filter()->implode(' / ') ?: '-',
         'Submitted On' => $portalRequest->submitted_at?->format('d M Y, h:i A'),
     ];
     $participation = [
@@ -135,7 +137,7 @@
                 <div class="card-header"><h3 class="card-title">Proposal / rate card</h3></div>
                 <div class="card-body space-y-2 text-sm">
                     @forelse ($portalRequest->documents->sortBy('version') as $document)
-                        <a href="{{ route('admin.exhibition-requests.document', ['portal_request' => $portalRequest->route_key, 'request_document' => $document->id]) }}" class="flex items-center gap-2 rounded-lg px-2 py-1.5 hover:bg-slate-50">
+                        <a href="{{ route('admin.exhibition-requests.document', ['portal_request' => $portalRequest->route_key, 'request_document' => $document->id]) }}" target="_blank" rel="noopener" class="flex items-center gap-2 rounded-lg px-2 py-1.5 hover:bg-slate-50">
                             <i class="ti ti-file-text text-lg text-indigo-600"></i>
                             <span class="flex-1 truncate">{{ $document->original_name }}</span>
                             <span class="text-xs text-slate-500">{{ $document->created_at->format('d M') }}</span>
