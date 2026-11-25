@@ -17,12 +17,15 @@ class DepartmentController extends Controller
 {
     public function index()
     {
-        return view('Admin.Departments.index');
+        return view('Admin.Departments.index', ['roles' => $this->roles()]);
     }
 
     public function data(Request $request)
     {
         $query = Department::with('user.roles', 'user.zone');
+        if ($request->filled('role')) {
+            $query->whereHas('user.roles', fn ($role) => $role->where('roles.id', (int) $request->role));
+        }
         if ($request->filled('status')) {
             $query->whereHas('user', fn ($user) => $user->where('status', $request->status));
         }

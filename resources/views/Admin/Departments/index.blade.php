@@ -7,6 +7,12 @@
             <h2 class="card-title">Departments</h2>
         </div>
         <div class="flex flex-wrap items-center gap-3">
+            <select id="filter-role" class="form-control datatable-filter w-44" aria-label="Role">
+                <option value="">All Roles</option>
+                @foreach ($roles as $role)
+                    <option value="{{ $role->id }}">{{ $role->name }}</option>
+                @endforeach
+            </select>
             <select id="filter-status" class="form-control datatable-filter w-44" aria-label="Status">
                 <option value="">All Status</option>
                 <option value="ACTIVE">Active</option>
@@ -51,6 +57,7 @@
                 type: 'POST',
                 data: function(d) {
                     d._token = $('meta[name=csrf-token]').attr('content');
+                    d.role = $('#filter-role').val();
                     d.status = $('#filter-status').val();
                 }
             },
