@@ -210,17 +210,21 @@
     });
     savedItems.length ? savedItems.forEach(addRow) : addRow();
 
-    // Gifts set on the Meeting Type (Event Types master) are read-only: type, item and
-    // quantity (= attendees) are set for you, and the row cannot be removed.
+    // Gifts set on the Meeting Type (Event Types master): type and item are fixed and the
+    // row cannot be removed. Quantity starts at the attendee count and can be changed.
     function lockRow(row) {
         row.addClass('type-locked');
         row.find('.item-type, .item-select')
             .addClass('pointer-events-none bg-slate-100 text-slate-500')
             .attr({tabindex: -1, 'aria-disabled': 'true', title: 'Set by Meeting Type'});
-        row.find('.item-qty').prop('readonly', true).addClass('bg-slate-100 text-slate-500').attr('title', 'Same as Attendee Count');
+        row.find('.item-qty').attr('title', 'Starts at Attendee Count; change it if needed');
         row.find('.auto-tag').removeClass('hidden');
         row.find('.remove-item').css('visibility', 'hidden').prop('disabled', true).attr('tabindex', -1);
     }
+    // Once a gift quantity is typed by hand, the attendee count no longer overwrites it.
+    $(document).on('input', '.item-row.type-locked .item-qty', function () {
+        $(this).closest('.item-row').addClass('qty-edited').find('.auto-tag').addClass('hidden');
+    });
     const typeGiftIds = () => (eventTypeGifts[$('#event_type_id').val()] || [])
         .filter(id => (itemTypes.gift?.options || []).some(option => option.id == id)).map(String);
     function applyTypeGifts() {
@@ -243,8 +247,8 @@
         renumberRows();
     }
     $('#event_type_id').on('change', applyTypeGifts);
-    // Meeting Type gifts always follow the attendee count.
-    $('#attendee_count').on('input', () => $('#item-rows .item-row.type-locked .item-qty').val(attendees()));
+    // Meeting Type gifts follow the attendee count until their quantity is typed by hand.
+    $('#attendee_count').on('input', () => $('#item-rows .item-row.type-locked').not('.qty-edited').find('.item-qty').val(attendees()));
     if (! savedItems.length && $('#event_type_id').val()) applyTypeGifts();
     if (savedItems.length) {
         const giftIds = typeGiftIds();
@@ -252,7 +256,7 @@
             const row = $(this);
             if (row.find('.item-type').val() !== 'gift' || ! giftIds.includes(row.find('.item-select').val())) return;
             lockRow(row);
-            row.find('.item-qty').val(attendees());
+            if (row.find('.item-qty').val() != attendees()) row.addClass('qty-edited').find('.auto-tag').addClass('hidden');
         });
     }
 

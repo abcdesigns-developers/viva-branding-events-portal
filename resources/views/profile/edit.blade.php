@@ -54,7 +54,7 @@
                 </div>
             </div>
             @if ($user->profile_photo)
-                <form method="POST" action="{{ route('profile.photo.destroy') }}" class="pt-3" onsubmit="return confirm('Remove your profile photo?')">
+                <form method="POST" action="{{ route('profile.photo.destroy') }}" class="pt-3" data-confirm="Remove your profile photo?" data-danger>
                     @csrf @method('DELETE')
                     <button class="btn btn-secondary"><i class="ti ti-trash"></i> Remove photo</button>
                 </form>

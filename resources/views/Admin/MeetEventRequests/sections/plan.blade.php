@@ -83,12 +83,15 @@
                 <div class="grid items-end gap-5 md:grid-cols-2">
                     <div>
                         <label for="plan_estimated_budget" class="form-label">Estimated budget (₹) <span class="text-red-500">*</span></label>
-                        <input type="number" min="1" step="0.01" id="plan_estimated_budget" name="estimated_budget" class="form-control" placeholder="Total budget" value="{{ $proposal?->estimated_budget !== null ? (float) $proposal->estimated_budget : '' }}"/>
+                        <div class="relative">
+                            <input type="number" min="1" step="0.01" id="plan_estimated_budget" name="estimated_budget" class="form-control" placeholder="Total budget" value="{{ $proposal?->estimated_budget !== null ? (float) $proposal->estimated_budget : '' }}"/>
+                            <span id="budget-auto-tag" class="absolute -top-2 right-2 hidden rounded bg-indigo-50 px-1.5 text-[10px] font-medium text-indigo-700">Auto</span>
+                        </div>
                         <div class="form-error" data-error="estimated_budget"></div>
                     </div>
                     <div class="rounded-lg bg-slate-50 px-4 py-3 text-slate-600">
                         Recommended venue + vendors = <span class="font-semibold text-slate-900">₹ <span id="auto-total">0</span></span>
-                        <button type="button" id="use-total" class="ml-2 text-xs font-medium text-indigo-700 hover:underline">Use this</button>
+                        <button type="button" id="use-total" class="ml-2 hidden text-xs font-medium text-indigo-700 hover:underline">Use this total</button>
                     </div>
                 </div>
 
@@ -161,11 +164,22 @@
                     $('#vendor-rows').append(row);
                     renumber();
                 }
+                // Estimated budget = recommended venue rate + all vendor quotations. It fills itself
+                // while it follows the total; once typed by hand it stays as typed ("Use this total" resets it).
+                let budgetEdited = true; // true while saved rows load, so the saved budget is not overwritten
                 function updateTotal() {
                     let total = parseFloat($('.venue-recommended:checked').closest('.venue-row').find('.venue-amount').val() || 0);
                     $('.vendor-amount').each(function () { total += parseFloat($(this).val() || 0); });
+                    total = Math.round(total * 100) / 100;
                     $('#auto-total').text(total.toLocaleString('en-IN', { maximumFractionDigits: 2 })).data('value', total);
+                    if (! budgetEdited) $('#plan_estimated_budget').val(total || '');
+                    $('#budget-auto-tag').toggleClass('hidden', budgetEdited);
+                    $('#use-total').toggleClass('hidden', ! budgetEdited || parseFloat($('#plan_estimated_budget').val()) === total);
                 }
+                $('#plan_estimated_budget').on('input', function () {
+                    budgetEdited = true;
+                    updateTotal();
+                });
                 $('#add-venue').on('click', () => addVenue());
                 $('#add-vendor').on('click', () => addVendor());
                 $(document).on('click', '#plan-form .remove-row', function () {
@@ -173,9 +187,16 @@
                     renumber();
                 });
                 $(document).on('input change', '.venue-amount, .vendor-amount, .venue-recommended', updateTotal);
-                $('#use-total').on('click', () => $('#plan_estimated_budget').val($('#auto-total').data('value') || ''));
+                $('#use-total').on('click', function () {
+                    budgetEdited = false;
+                    updateTotal();
+                });
                 savedVenues.length ? savedVenues.forEach(addVenue) : addVenue();
                 savedVendors.length ? savedVendors.forEach(addVendor) : addVendor();
+                // After loading: a blank budget, or one equal to the total, keeps following the total.
+                const savedBudget = $('#plan_estimated_budget').val();
+                budgetEdited = savedBudget !== '' && parseFloat(savedBudget) !== $('#auto-total').data('value');
+                updateTotal();
 
                 // Empty rows are left out, so a blank row never blocks Save.
                 $('#plan-form').on('js-form:before', function (e, data) {

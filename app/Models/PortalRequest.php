@@ -59,6 +59,9 @@ class PortalRequest extends BaseModel
      * Meet Events' own 12 statuses, in order, with the master stage each one rolls up to.
      * Draft and Returned sit outside this line.
      */
+    /** Most guests a Meet can have, all guest categories together. */
+    const MAX_MEET_GUESTS = 100;
+
     const MEET_STATUSES = [
         'Request Raised' => 'Request Raised',
         'Initial Approval' => 'Approval',

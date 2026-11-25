@@ -48,13 +48,15 @@ class MeetEventStoreRequest extends FormRequest
     public function after(): array
     {
         return [
-            // Guest counts: only real categories, and at least one.
+            // Guest counts: only real categories, at least one, and at most 100 guests in total.
             function (Validator $validator) {
                 $guests = collect((array) $this->input('guests', []))->filter(fn ($count) => (int) $count > 0);
                 if ($guests->keys()->diff(GuestCategory::whereIn('id', $guests->keys())->pluck('id'))->isNotEmpty()) {
                     $validator->errors()->add('guests', 'Please select valid guest categories');
                 } elseif ($guests->isEmpty()) {
                     $validator->errors()->add('guests', 'Enter the number of guests for at least one guest category');
+                } elseif ($guests->sum(fn ($count) => (int) $count) > PortalRequest::MAX_MEET_GUESTS) {
+                    $validator->errors()->add('guests', 'Total guests cannot be more than ' . PortalRequest::MAX_MEET_GUESTS);
                 }
             },
             // Each item must exist in its master list (Gift, POP, Catalogue, Sample).

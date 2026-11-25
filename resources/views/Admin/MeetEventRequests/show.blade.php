@@ -162,12 +162,12 @@
     // an "action" value (Save / Submit) and a confirm message. Errors land in [data-error] boxes.
     let clicked = null;
     $(document).on('click', '.js-form button[type=submit]', function () { clicked = $(this); });
-    $(document).on('submit', '.js-form', function (e) {
+    $(document).on('submit', '.js-form', async function (e) {
         e.preventDefault();
         const form = $(this);
         const button = clicked && $.contains(this, clicked[0]) ? clicked : form.find('button[type=submit]').first();
         clicked = null;
-        if (button.data('confirm') && ! confirm(button.data('confirm'))) return;
+        if (button.data('confirm') && ! await confirmBox(button.data('confirm'), {okText: button.text().trim() || 'Yes, continue'})) return;
         const data = new FormData(this);
         if (button.data('action')) data.set('action', button.data('action'));
         form.trigger('js-form:before', [data]);

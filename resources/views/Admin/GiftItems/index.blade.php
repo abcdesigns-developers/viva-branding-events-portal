@@ -97,9 +97,9 @@
         });
     });
 
-    $(document).on('click', '.gift-item-delete-btn', function(e) {
+    $(document).on('click', '.gift-item-delete-btn', async function(e) {
         e.preventDefault();
-        if (! confirm('Are you sure you want to delete "' + $(this).data('name') + '"? This cannot be undone.')) {
+        if (! await confirmBox('Are you sure you want to delete "' + $(this).data('name') + '"? This cannot be undone.', {danger: true})) {
             return;
         }
         $.ajax({

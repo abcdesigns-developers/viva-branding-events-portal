@@ -221,12 +221,14 @@ class MeetEventRequestController extends Controller
         // Keep only categories with guests; their total is the request's guest count.
         $data['guests'] = collect($data['guests'] ?? [])->filter(fn ($count) => (int) $count > 0)->map(fn ($count) => (int) $count)->all();
 
-        // Gifts set on the Event Type are fixed: one row each, quantity = total guests.
+        // Gifts set on the Event Type are always kept (one row each). Their quantity is what
+        // was entered, or total guests when left blank.
         $typeGiftIds = EventType::find($data['event_type_id'] ?? null)?->gifts()->where('gift_items.status', 'ACTIVE')->pluck('gift_items.id')->all() ?? [];
-        $data['items'] = collect($data['items'] ?? [])
-            ->reject(fn ($item) => $item['type'] === 'gift' && in_array((int) $item['item_id'], $typeGiftIds, true))
-            ->values()
-            ->merge(array_map(fn ($id) => ['type' => 'gift', 'item_id' => $id, 'quantity' => array_sum($data['guests'])], $typeGiftIds))
+        $items = collect($data['items'] ?? []);
+        $isTypeGift = fn ($item) => $item['type'] === 'gift' && in_array((int) $item['item_id'], $typeGiftIds, true);
+        $giftQty = $items->filter($isTypeGift)->mapWithKeys(fn ($item) => [(int) $item['item_id'] => (int) ($item['quantity'] ?? 0)]);
+        $data['items'] = $items->reject($isTypeGift)->values()
+            ->merge(array_map(fn ($id) => ['type' => 'gift', 'item_id' => $id, 'quantity' => ($giftQty[$id] ?? 0) ?: array_sum($data['guests'])], $typeGiftIds))
             ->all();
 
         $portalRequest->fill([

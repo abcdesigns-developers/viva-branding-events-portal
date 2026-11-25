@@ -99,7 +99,7 @@
                         <p class="border-t border-slate-100 px-4 py-3 text-sm text-slate-500">Add Guest Categories in Master Management first.</p>
                     @endforelse
                     <div class="flex items-center justify-between border-t border-slate-200 bg-indigo-50 px-4 py-3">
-                        <span class="text-sm font-semibold text-indigo-900">Total Guests</span>
+                        <span class="text-sm font-semibold text-indigo-900">Total Guests <span class="font-normal text-indigo-700">(max {{ \App\Models\PortalRequest::MAX_MEET_GUESTS }})</span></span>
                         <span class="w-28 text-center text-lg font-semibold text-indigo-900" id="total-guests">0</span>
                     </div>
                 </div>
@@ -200,6 +200,7 @@
     const itemTypes = @json($itemTypes);
     const savedItems = @json($savedItems);
     const eventTypeGifts = @json($eventTypeGifts);
+    const maxGuests = {{ \App\Models\PortalRequest::MAX_MEET_GUESTS }};
 
     // Total guests = sum of the ticked categories.
     function updateTotal() {
@@ -210,8 +211,10 @@
             if (checked) total += parseInt($(this).val() || 0, 10);
         });
         $('#total-guests').text(total);
-        // Event Type gifts always follow the guest total.
-        $('#item-rows .item-row.type-locked').find('.item-qty').val(total || '');
+        // Warn straight away when the total goes over the limit (the server checks it too).
+        $('#guests-error').text(total > maxGuests ? 'Total guests cannot be more than ' + maxGuests : '');
+        // Event Type gifts follow the guest total until their quantity is typed by hand.
+        $('#item-rows .item-row.type-locked').not('.qty-edited').find('.item-qty').val(total || '');
     }
     $(document).on('change input', '.guest-check, .guest-count', updateTotal);
     updateTotal();
@@ -266,17 +269,21 @@
     });
     savedItems.length ? savedItems.forEach(addRow) : addRow();
 
-    // Gifts that come from the Event Type are read-only: type, item and quantity
-    // (= Total Guests) are set for you, and the row cannot be removed.
+    // Gifts that come from the Event Type: type and item are fixed and the row cannot be
+    // removed. Quantity starts at Total Guests and can be changed.
     function lockRow(row) {
         row.addClass('type-locked');
         row.find('.item-type, .item-select')
             .addClass('pointer-events-none bg-slate-100 text-slate-500')
             .attr({tabindex: -1, 'aria-disabled': 'true', title: 'Set by Event Type'});
-        row.find('.item-qty').prop('readonly', true).addClass('bg-slate-100 text-slate-500').attr('title', 'Same as Total Guests');
+        row.find('.item-qty').attr('title', 'Starts at Total Guests; change it if needed');
         row.find('.auto-tag').removeClass('hidden');
         row.find('.remove-item').css('visibility', 'hidden').prop('disabled', true).attr('tabindex', -1);
     }
+    // Once a gift quantity is typed by hand, Total Guests no longer overwrites it.
+    $(document).on('input', '.item-row.type-locked .item-qty', function () {
+        $(this).closest('.item-row').addClass('qty-edited').find('.auto-tag').addClass('hidden');
+    });
     const typeGiftIds = () => (eventTypeGifts[$('#event_type_id').val()] || [])
         .filter(id => (itemTypes.gift?.options || []).some(option => option.id == id)).map(String);
 
@@ -305,7 +312,7 @@
     $('#event_type_id').on('change', applyTypeGifts);
     // New request with a type already chosen (e.g. after validation) gets its gifts too.
     if (! savedItems.length && $('#event_type_id').val()) applyTypeGifts();
-    // Editing: saved gifts of the current type are locked again and follow Total Guests.
+    // Editing: saved gifts of the current type are locked again and keep their saved quantity.
     if (savedItems.length) {
         const giftIds = typeGiftIds();
         const total = $('#total-guests').text();
@@ -313,7 +320,7 @@
             const row = $(this);
             if (row.find('.item-type').val() !== 'gift' || ! giftIds.includes(row.find('.item-select').val())) return;
             lockRow(row);
-            row.find('.item-qty').val(total);
+            if (row.find('.item-qty').val() != total) row.addClass('qty-edited').find('.auto-tag').addClass('hidden');
         });
     }
 

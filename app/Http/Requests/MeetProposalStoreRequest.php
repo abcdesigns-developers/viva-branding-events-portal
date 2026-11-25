@@ -16,6 +16,21 @@ class MeetProposalStoreRequest extends FormRequest
         return true;
     }
 
+    /** A blank estimated budget becomes recommended venue rate + all vendor quotations. */
+    protected function prepareForValidation(): void
+    {
+        if ($this->filled('estimated_budget')) {
+            return;
+        }
+        $venues = (array) $this->input('venues', []);
+        $recommended = $this->input('recommended_venue');
+        $total = ($recommended !== null && $recommended !== '' ? (float) ($venues[(int) $recommended]['amount'] ?? 0) : 0)
+            + collect((array) $this->input('vendors', []))->sum(fn ($vendor) => (float) ($vendor['amount'] ?? 0));
+        if ($total > 0) {
+            $this->merge(['estimated_budget' => round($total, 2)]);
+        }
+    }
+
     public function rules(): array
     {
         $submit = $this->input('action') === 'submit';

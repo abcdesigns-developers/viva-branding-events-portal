@@ -217,12 +217,14 @@ class PresentationRequestController extends Controller
         ]);
         $portalRequest->save();
 
-        // Gifts set on the Meeting Type are fixed: one row each, quantity = attendee count.
+        // Gifts set on the Meeting Type are always kept (one row each). Their quantity is what
+        // was entered, or the attendee count when left blank.
         $typeGiftIds = EventType::find($data['event_type_id'] ?? null)?->gifts()->where('gift_items.status', 'ACTIVE')->pluck('gift_items.id')->all() ?? [];
-        $data['items'] = collect($data['items'] ?? [])
-            ->reject(fn ($item) => $item['type'] === 'gift' && in_array((int) $item['item_id'], $typeGiftIds, true))
-            ->values()
-            ->merge(array_map(fn ($id) => ['type' => 'gift', 'item_id' => $id, 'quantity' => (int) $data['attendee_count']], $typeGiftIds))
+        $items = collect($data['items'] ?? []);
+        $isTypeGift = fn ($item) => $item['type'] === 'gift' && in_array((int) $item['item_id'], $typeGiftIds, true);
+        $giftQty = $items->filter($isTypeGift)->mapWithKeys(fn ($item) => [(int) $item['item_id'] => (int) ($item['quantity'] ?? 0)]);
+        $data['items'] = $items->reject($isTypeGift)->values()
+            ->merge(array_map(fn ($id) => ['type' => 'gift', 'item_id' => $id, 'quantity' => ($giftQty[$id] ?? 0) ?: (int) $data['attendee_count']], $typeGiftIds))
             ->all();
 
         $portalRequest->items()->delete();
