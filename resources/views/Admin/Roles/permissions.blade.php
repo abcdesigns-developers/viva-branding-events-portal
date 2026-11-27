@@ -34,9 +34,10 @@
                     @endphp
                     @foreach ($permissions_groups as $permissions_group)
                     @php
-                        $prefix = strtolower(str_replace(' ', '', $permissions_group->name)) . '-';
+                        // The action is the part after the dash ("giftpoprequest-view" -> "view"), so the
+                        // group's display name ("Gift & POP Request") does not have to match the permission prefix.
                         // toBase(): plain collection, so except() works on these action keys (Eloquent's except() filters by id).
-                        $byAction = $permissions_group->permissions->toBase()->keyBy(fn ($permission) => str_replace($prefix, '', $permission->name));
+                        $byAction = $permissions_group->permissions->toBase()->keyBy(fn ($permission) => \Illuminate\Support\Str::afterLast($permission->name, '-'));
                     @endphp
                     <tr>
                         <td class="font-medium text-slate-900">{{$permissions_group->name}}</td>

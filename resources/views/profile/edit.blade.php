@@ -40,7 +40,7 @@
                         <label class="absolute -bottom-2 -right-2 flex h-9 w-9 cursor-pointer items-center justify-center rounded-full bg-brand-600 text-white shadow-lg ring-4 ring-white transition hover:bg-brand-700" title="Change photo">
                             <i class="ti ti-camera"></i>
                             <input type="file" name="photo" accept=".jpg,.jpeg,.png,.webp" class="sr-only"
-                                   @change="const f = $event.target.files[0]; if (f) { if (f.size > 3145728) { alert('Photo must be under 3 MB.'); $event.target.value = ''; return; } preview = URL.createObjectURL(f); $refs.photoForm.submit(); }">
+                                   @change="const f = $event.target.files[0]; if (f) { if (f.size > 3145728) { toastr.error('Photo must be under 3 MB.', '', { closeButton: true, timeOut: 2500 }); $event.target.value = ''; return; } preview = URL.createObjectURL(f); $refs.photoForm.submit(); }">
                         </label>
                     </form>
                 </div>
