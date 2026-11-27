@@ -24,6 +24,11 @@ class SponsorshipDeliverableController extends Controller
             $query->where('status', $request->status);
         }
 
+        // Fixed default order (when no column is clicked), so paging never repeats or skips a row.
+        if (! $request->filled('order')) {
+            $query->orderBy($query->getModel()->getQualifiedKeyName());
+        }
+
         return DataTables::eloquent($query)
             ->editColumn('description', function ($sponsorshipDeliverable) {
                 return Str::limit($sponsorshipDeliverable->description, 80);

@@ -43,6 +43,11 @@ class MeetEventRequestController extends Controller
             $query->where('status', $request->status);
         }
 
+        // Fixed default order (when no column is clicked), so paging never repeats or skips a row.
+        if (! $request->filled('order')) {
+            $query->orderByDesc($query->getModel()->getQualifiedKeyName());
+        }
+
         return DataTables::eloquent($query)
             ->editColumn('request_no', function ($portalRequest) {
                 return $portalRequest->request_no ?? '-';

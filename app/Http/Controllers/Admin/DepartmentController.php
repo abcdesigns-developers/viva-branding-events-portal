@@ -30,6 +30,11 @@ class DepartmentController extends Controller
             $query->whereHas('user', fn ($user) => $user->where('status', $request->status));
         }
 
+        // Fixed default order (when no column is clicked), so paging never repeats or skips a row.
+        if (! $request->filled('order')) {
+            $query->orderBy($query->getModel()->getQualifiedKeyName());
+        }
+
         return DataTables::eloquent($query)
             ->addColumn('name', function ($department) {
                 return $department->user->name;

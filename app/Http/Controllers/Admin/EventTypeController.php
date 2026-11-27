@@ -30,6 +30,11 @@ class EventTypeController extends Controller
             $query->where('event_id', $request->event_id);
         }
 
+        // Fixed default order (when no column is clicked), so paging never repeats or skips a row.
+        if (! $request->filled('order')) {
+            $query->orderBy($query->getModel()->getQualifiedKeyName());
+        }
+
         return DataTables::eloquent($query)
             ->addColumn('event', function ($eventType) {
                 return $eventType->event?->name;

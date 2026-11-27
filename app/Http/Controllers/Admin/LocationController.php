@@ -23,6 +23,11 @@ class LocationController extends Controller
             $query->where('status', $request->status);
         }
 
+        // Fixed default order (when no column is clicked), so paging never repeats or skips a row.
+        if (! $request->filled('order')) {
+            $query->orderBy($query->getModel()->getQualifiedKeyName());
+        }
+
         return DataTables::eloquent($query)
             ->addColumn('zone', fn ($location) => $location->zone?->name ?? '-')
             ->addColumn('status', function ($location) {

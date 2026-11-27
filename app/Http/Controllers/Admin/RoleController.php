@@ -26,6 +26,11 @@ class RoleController extends Controller
         $query = Role::whereNotIn('name', $systemRoles);
         // $query = Role::where('id','!=',0);
 
+        // Fixed default order (when no column is clicked), so paging never repeats or skips a row.
+        if (! $request->filled('order')) {
+            $query->orderBy('name');
+        }
+
         return DataTables::eloquent($query)
             ->editColumn('name', function ($role) {
                 return $role->name;

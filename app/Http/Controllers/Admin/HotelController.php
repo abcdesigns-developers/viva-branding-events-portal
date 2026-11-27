@@ -23,6 +23,11 @@ class HotelController extends Controller
             $query->where('status', $request->status);
         }
 
+        // Fixed default order (when no column is clicked), so paging never repeats or skips a row.
+        if (! $request->filled('order')) {
+            $query->orderBy($query->getModel()->getQualifiedKeyName());
+        }
+
         return DataTables::eloquent($query)
             ->addColumn('status', function ($hotel) {
                 $checked = $hotel->status == 'ACTIVE' ? 'checked' : '';
